@@ -27,6 +27,7 @@
 package org.spout.engine.security;
 
 import java.io.File;
+import java.io.FilePermission;
 import java.net.SocketPermission;
 import java.security.AllPermission;
 import java.security.CodeSource;
@@ -51,7 +52,7 @@ public class CommonPolicy extends Policy {
 	private static PermissionCollection spoutPerms;
 	private static PermissionCollection defaultPluginPerms;
 	private static PermissionCollection defaultClientPluginPerms;
-	private Map<CodeSource, Plugin> pluginMap = new HashMap<CodeSource, Plugin>();
+	private Map<CodeSource, PluginPermissions> pluginMap = new HashMap<CodeSource, PluginPermissions>();
 	private CodeSource spoutCodeSource;
 
 	public CommonPolicy() {
@@ -84,7 +85,11 @@ public class CommonPolicy extends Policy {
 		defaultPluginPerms = new PublicPermissionCollection(defaultClientPluginPerms.elements());
 	}
 
-	public Plugin sourceToPlugin(CodeSource source) {
+	public void setupPluginPerms(Plugin plugin, PermissionCollection perms) {
+		perms.add(new FilePermission(plugin.getDataFolder().getAbsolutePath() + File.separator + "-", "read,write,delete"));
+	}
+
+	public PluginPermissions sourceToPlugin(CodeSource source) {
 		if (pluginMap.get(source) != null) {
 			return pluginMap.get(source);
 		}
@@ -92,8 +97,18 @@ public class CommonPolicy extends Policy {
 		File file = new File(source.getLocation().getFile()).getAbsoluteFile();
 		for (Plugin plugin : Spout.getPluginManager().getPlugins()) {
 			if (plugin.getFile().getAbsoluteFile().equals(file)) {
-				pluginMap.put(source, plugin);
-				return plugin;
+				PermissionCollection perms;
+				if (Spout.getEngine().getPlatform() == Platform.CLIENT) {
+					perms = new PublicPermissionCollection(defaultClientPluginPerms.elements());
+				} else {
+					perms = new PublicPermissionCollection(defaultPluginPerms.elements());
+				}
+
+				setupPluginPerms(plugin, perms);
+
+				PluginPermissions pp = new PluginPermissions(plugin, perms);
+				pluginMap.put(source, pp);
+				return pp;
 			}
 		}
 		return null;
@@ -103,10 +118,8 @@ public class CommonPolicy extends Policy {
 	public PermissionCollection getPermissions(CodeSource codesource) {
 		if (isSpout(codesource)) {
 			return spoutPerms;
-		} else if (Spout.getEngine().getPlatform() == Platform.CLIENT) {
-			return defaultClientPluginPerms;
 		}
-		return defaultPluginPerms;
+		return sourceToPlugin(codesource).getPerms();
 	}
 
 	public boolean isSpout(CodeSource codeSource) {
@@ -161,6 +174,24 @@ public class CommonPolicy extends Policy {
 		@Override
 		public boolean isReadOnly() {
 			return false;
+		}
+	}
+
+	public class PluginPermissions {
+		private final Plugin plugin;
+		private final PermissionCollection perms;
+
+		public PluginPermissions(Plugin plugin, PermissionCollection perms) {
+			this.plugin = plugin;
+			this.perms = perms;
+		}
+
+		public Plugin getPlugin() {
+			return plugin;
+		}
+
+		public PermissionCollection getPerms() {
+			return perms;
 		}
 	}
 }
