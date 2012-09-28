@@ -37,17 +37,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.PropertyPermission;
 
 import org.spout.api.Spout;
 import org.spout.api.plugin.Platform;
+import org.spout.api.plugin.Plugin;
 import org.spout.engine.SpoutApplication;
 
 public class CommonPolicy extends Policy {
 	private static PermissionCollection spoutPerms;
 	private static PermissionCollection defaultPluginPerms;
 	private static PermissionCollection defaultClientPluginPerms;
+	private Map<CodeSource, Plugin> pluginMap = new HashMap<CodeSource, Plugin>();
 	private CodeSource spoutCodeSource;
 
 	public CommonPolicy() {
@@ -78,6 +82,21 @@ public class CommonPolicy extends Policy {
 		defaultClientPluginPerms.add(new SocketPermission("localhost:1024-", "listen"));
 
 		defaultPluginPerms = new PublicPermissionCollection(defaultClientPluginPerms.elements());
+	}
+
+	public Plugin sourceToPlugin(CodeSource source) {
+		if (pluginMap.get(source) != null) {
+			return pluginMap.get(source);
+		}
+
+		File file = new File(source.getLocation().getFile()).getAbsoluteFile();
+		for (Plugin plugin : Spout.getPluginManager().getPlugins()) {
+			if (plugin.getFile().getAbsoluteFile().equals(file)) {
+				pluginMap.put(source, plugin);
+				return plugin;
+			}
+		}
+		return null;
 	}
 
 	@Override
