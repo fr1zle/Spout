@@ -26,6 +26,8 @@
  */
 package org.spout.engine;
 
+import java.security.Policy;
+
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
@@ -33,6 +35,7 @@ import org.spout.api.Spout;
 import org.spout.api.plugin.Platform;
 import org.spout.api.render.RenderMode;
 
+import org.spout.engine.security.CommonPolicy;
 import org.spout.engine.util.argument.PlatformConverter;
 import org.spout.engine.util.argument.RenderModeConverter;
 
@@ -48,6 +51,8 @@ public class SpoutApplication {
 	RenderMode renderMode = RenderMode.GL30;
 
 	public static void main(String[] args) {
+		Policy.setPolicy(new CommonPolicy());
+		System.setSecurityManager(new SecurityManager());
 		try {
 			SpoutApplication main = new SpoutApplication();
 			JCommander commands = new JCommander(main);
