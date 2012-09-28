@@ -27,6 +27,7 @@
 package org.spout.engine.security;
 
 import java.io.File;
+import java.net.SocketPermission;
 import java.security.AllPermission;
 import java.security.CodeSource;
 import java.security.Permission;
@@ -37,6 +38,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.PropertyPermission;
 
 import org.spout.api.Spout;
 import org.spout.api.plugin.Platform;
@@ -44,13 +46,38 @@ import org.spout.engine.SpoutApplication;
 
 public class CommonPolicy extends Policy {
 	private static PermissionCollection spoutPerms;
-	private static PermissionCollection pluginPerms;
-	private static PermissionCollection clientPluginPerms;
+	private static PermissionCollection defaultPluginPerms;
+	private static PermissionCollection defaultClientPluginPerms;
 	private CodeSource spoutCodeSource;
 
 	public CommonPolicy() {
 		super();
 		spoutPerms = new PublicPermissionCollection(new AllPermission());
+
+		defaultClientPluginPerms = new PublicPermissionCollection();
+		// Give plugins all permissions defined in the default java permissions file
+		defaultClientPluginPerms.add(new PropertyPermission("java.version", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.vendor", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.vendor.url", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.class.version", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("os.name", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("os.version", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("os.arch", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("file.separator", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("path.separator", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("line.separator", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.specification.version", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.specification.vendor", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.specification.name", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.vm.specification.version", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.vm.specification.vendor", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.vm.specification.name", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.vm.version", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.vm.vendor", "read"));
+		defaultClientPluginPerms.add(new PropertyPermission("java.vm.name", "read"));
+		defaultClientPluginPerms.add(new SocketPermission("localhost:1024-", "listen"));
+
+		defaultPluginPerms = new PublicPermissionCollection(defaultClientPluginPerms.elements());
 	}
 
 	@Override
@@ -58,9 +85,9 @@ public class CommonPolicy extends Policy {
 		if (isSpout(codesource)) {
 			return spoutPerms;
 		} else if (Spout.getEngine().getPlatform() == Platform.CLIENT) {
-			return clientPluginPerms;
+			return defaultClientPluginPerms;
 		}
-		return pluginPerms;
+		return defaultPluginPerms;
 	}
 
 	public boolean isSpout(CodeSource codeSource) {
@@ -82,14 +109,22 @@ public class CommonPolicy extends Policy {
 		public PublicPermissionCollection() {
 		}
 
+		public PublicPermissionCollection(Enumeration<Permission> perms) {
+			while (perms.hasMoreElements()) {
+				this.perms.add(perms.nextElement());
+			}
+		}
+
 		public PublicPermissionCollection(Permission... perms) {
 			this.perms.addAll(Arrays.asList(perms));
 		}
 
+		@Override
 		public void add(Permission p) {
 			perms.add(p);
 		}
 
+		@Override
 		public boolean implies(Permission p) {
 			for (Permission perm : perms) {
 				if ((perm).implies(p)) {
@@ -99,10 +134,12 @@ public class CommonPolicy extends Policy {
 			return false;
 		}
 
+		@Override
 		public Enumeration<Permission> elements() {
 			return Collections.enumeration(perms);
 		}
 
+		@Override
 		public boolean isReadOnly() {
 			return false;
 		}
