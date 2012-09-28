@@ -27,11 +27,13 @@
 package org.spout.engine.security;
 
 import java.io.File;
+import java.security.AllPermission;
 import java.security.CodeSource;
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.security.Policy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
@@ -48,6 +50,7 @@ public class CommonPolicy extends Policy {
 
 	public CommonPolicy() {
 		super();
+		spoutPerms = new PublicPermissionCollection(new AllPermission());
 	}
 
 	@Override
@@ -72,9 +75,16 @@ public class CommonPolicy extends Policy {
 		return codeSource.equals(spoutCodeSource);
 	}
 
-	public class PublicPermissionCollection extends PermissionCollection {
-		private static final long serialVersionUID = 614300921365729272L;
+	public class PublicPermissionCollection extends PermissionCollection implements Cloneable {
+		private static final long serialVersionUID = -7823947134698234691L;
 		private final List<Permission> perms = new ArrayList<Permission>();
+
+		public PublicPermissionCollection() {
+		}
+
+		public PublicPermissionCollection(Permission... perms) {
+			this.perms.addAll(Arrays.asList(perms));
+		}
 
 		public void add(Permission p) {
 			perms.add(p);

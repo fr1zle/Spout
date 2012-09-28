@@ -166,7 +166,6 @@ public abstract class SpoutEngine extends AsyncManager implements Engine {
 		super(1, new ThreadAsyncExecutor("Engine bootstrap thread"));
 		logFile = "logs" + File.separator + "log-%D.txt";
 		consoleManager = new ConsoleManager(this);
-		System.setSecurityManager(securityManager);
 	}
 
 	public void init(SpoutApplication args) {
