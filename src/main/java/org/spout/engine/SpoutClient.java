@@ -78,8 +78,10 @@ import org.spout.api.component.components.ModelComponent;
 import org.spout.api.component.components.PredictableTransformComponent;
 import org.spout.api.datatable.SerializableMap;
 import org.spout.api.entity.Entity;
+import org.spout.api.entity.Player;
 import org.spout.api.entity.state.PlayerInputState;
 import org.spout.api.event.server.ClientEnableEvent;
+import org.spout.api.generator.WorldGenerator;
 import org.spout.api.geo.World;
 import org.spout.api.geo.cuboid.Chunk;
 import org.spout.api.geo.discrete.Point;
@@ -202,7 +204,7 @@ public class SpoutClient extends SpoutEngine implements Client {
 
 	@Override
 	public void start() {
-		start(true);
+		start(false);
 	}
 
 	@Override
@@ -220,28 +222,18 @@ public class SpoutClient extends SpoutEngine implements Client {
 		// Register commands
 		getRootCommand().addSubCommands(this, InputManagementCommands.class, commandRegFactory);
 
-		while (super.getDefaultWorld() == null) {
-			try {
-				Thread.sleep(10);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			// TODO : Wait until the world is fully loaded
-		}
 		font = (ClientFont) Spout.getFilesystem().getResource("font://Spout/resources/resources/fonts/ubuntu/Ubuntu-M.ttf");
-		Transform loc = new Transform(new Point(super.getDefaultWorld(), 50f, 30f, 50f), new Quaternion(0f, 0f, 0f, 0f), Vector3.ONE);
+		Transform loc = new Transform(new Point(getDefaultWorld(), 50f, 30f, 50f), new Quaternion(0f, 0f, 0f, 0f), Vector3.ONE);
 		activePlayer = new SpoutClientPlayer("Spouty", loc, SpoutConfiguration.VIEW_DISTANCE.getInt() * Chunk.BLOCKS.SIZE);
 		activeCamera = activePlayer.add(CameraComponent.class);
 		activePlayer.add(HitBlockComponent.class);
-		super.getDefaultWorld().spawnEntity(activePlayer);
+		getDefaultWorld().spawnEntity(activePlayer);
 
 		getScheduler().startRenderThread();
 		getScheduler().startGuiThread();
 
-		//TODO Maybe a better way of alerting plugins the client is done?
-		if (ClientEnableEvent.getHandlerList().getRegisteredListeners().length != 0) {
-			Spout.getEventManager().callEvent(new ClientEnableEvent());
-		}
+		// TODO Maybe a better way of letting plugins know that the client is ready?
+		Spout.getEventManager().callEvent(new ClientEnableEvent());
 	}
 
 	@Override
@@ -305,7 +297,7 @@ public class SpoutClient extends SpoutEngine implements Client {
 		if (activePlayer == null) {
 			return;
 		}
-		
+
 		inputManager.pollInput(activePlayer);
 
 		PlayerInputState inputState = activePlayer.input();
@@ -313,18 +305,30 @@ public class SpoutClient extends SpoutEngine implements Client {
 		ts.setRotation(MathHelper.rotation(inputState.pitch(), inputState.yaw(), ts.getRotation().getRoll()));
 
 		Point point = ts.getPosition();
-		if (inputState.getForward())
+		if (inputState.getForward()) {
 			point = point.subtract(ts.forwardVector().multiply(activeCamera.getSpeed()).multiply(dt));
-		if (inputState.getBackward())
+		}
+
+		if (inputState.getBackward()) {
 			point = point.add(ts.forwardVector().multiply(activeCamera.getSpeed()).multiply(dt));
-		if (inputState.getLeft())
+		}
+
+		if (inputState.getLeft()) {
 			point = point.subtract(ts.rightVector().multiply(activeCamera.getSpeed()).multiply(dt));
-		if (inputState.getRight())
+		}
+
+		if (inputState.getRight()) {
 			point = point.add(ts.rightVector().multiply(activeCamera.getSpeed()).multiply(dt));
-		if (inputState.getJump())
+		}
+
+		if (inputState.getJump()) {
 			point = point.add(ts.upVector().multiply(activeCamera.getSpeed()).multiply(dt));
-		if (inputState.getCrouch())
+		}
+
+		if (inputState.getCrouch()) {
 			point = point.subtract(ts.upVector().multiply(activeCamera.getSpeed()).multiply(dt));
+		}
+
 		ts.setPosition(point);
 
 		activePlayer.getTransform().setTransform(ts);
@@ -365,7 +369,7 @@ public class SpoutClient extends SpoutEngine implements Client {
 		super.stop(stopMessage);
 	}
 
-	/*@Override //Because there is a conflict when the spout engine tries to load the world
+	@Override
 	public SpoutClientWorld getWorld(String name, boolean exact) {
 		SpoutClientWorld world = activeWorld.get();
 		if (world == null) {
@@ -378,7 +382,7 @@ public class SpoutClient extends SpoutEngine implements Client {
 		} else {
 			return null;
 		}
-	}*/
+	}
 
 	@Override
 	public SpoutClientWorld getWorld(UUID uid) {
@@ -395,10 +399,15 @@ public class SpoutClient extends SpoutEngine implements Client {
 		return Collections.<World>singletonList(activeWorld.get());
 	}
 
-	/*@Override
+	@Override
 	public SpoutClientWorld getDefaultWorld() {
 		return activeWorld.get();
-	}*/
+	}
+
+	@Override
+	public World loadWorld(String name, WorldGenerator generator) {
+		throw new UnsupportedOperationException("Not supported on client.");
+	}
 
 	@Override
 	public SpoutClientWorld worldChanged(String name, UUID uuid, byte[] data) {
@@ -422,6 +431,7 @@ public class SpoutClient extends SpoutEngine implements Client {
 			activeWorld.compareAndSet(world, null);
 			throw new IllegalStateException("Unable to start executor for new world");
 		}
+		getWorldRenderer().setWorld(world);
 		return world;
 	}
 
@@ -435,6 +445,26 @@ public class SpoutClient extends SpoutEngine implements Client {
 		return new SpoutClientSession(this, channel, protocol);
 	}
 
+	@Override
+	public Player getPlayer(String name, boolean exact) {
+		name = name.toLowerCase();
+		if (exact) {
+			if (activePlayer.getName().equals(name) && activePlayer.isOnline()) {
+				return activePlayer;
+			}
+		} else if (activePlayer.getName().startsWith(name) && activePlayer.isOnline()) {
+			return activePlayer;
+		}
+
+		// Non matching name or not connected to a server
+		return null;
+	}
+
+	@Override
+	public Collection<Player> matchPlayer(String name) {
+		return activePlayer.getName().startsWith(name.toLowerCase()) ? Collections.<Player>singleton(activePlayer) : Collections.<Player>emptySet();
+	}
+
 	public void connect(final PortBinding binding) {
 		potentialBinding.set(binding);
 		getBootstrap().connect(binding.getAddress()).addListener(new SpoutClientConnectListener(this, binding));
@@ -445,6 +475,14 @@ public class SpoutClient extends SpoutEngine implements Client {
 		if (sess != null) {
 			getSessionRegistry().remove(sess);
 		}
+
+		SpoutClientWorld oldWorld = activeWorld.getAndSet(null);
+		if (oldWorld != null) {
+			if (!oldWorld.getExecutor().haltExecutor()) {
+				throw new IllegalStateException("Executor was already halted when halting was attempted");
+			}
+			oldWorld.unload(false);
+		}
 	}
 
 	public void setSession(SpoutClientSession session) {
@@ -452,7 +490,6 @@ public class SpoutClient extends SpoutEngine implements Client {
 		getSessionRegistry().add(session);
 		activePlayer.connect(session, activePlayer.getTransform().getTransform());
 		session.setPlayer(activePlayer);
-		players.putIfAbsent(activePlayer.getName(), activePlayer);
 	}
 
 	public void initRenderer() {
@@ -485,7 +522,7 @@ public class SpoutClient extends SpoutEngine implements Client {
 
 		//Init pool of BatchVertexRenderer
 		BatchVertexRenderer.initPool(GL11.GL_TRIANGLES, 10000);
-		
+
 		worldRenderer = new WorldRenderer(this);
 
 		gui = SpriteBatch.createSpriteBatch(getRenderMode(), resolution.getX(), resolution.getY());
@@ -493,7 +530,7 @@ public class SpoutClient extends SpoutEngine implements Client {
 		// Test
 		ClientEntityPrefab spoutyType = (ClientEntityPrefab) Spout.getFilesystem().getResource("entity://Spout/resources/resources/entities/Spouty/spouty.sep");
 
-		Entity e = spoutyType.createEntity(new Point(super.getDefaultWorld(),0,0,0));
+		Entity e = spoutyType.createEntity(new Point(getDefaultWorld(),0,0,0));
 		e.setSavable(false); // To prevent entity duplication
 		ClientTextModelComponent tmc = e.add(ClientTextModelComponent.class);
 		tmc.setText(new ChatArguments(ChatStyle.BLUE, "Sp", ChatStyle.WHITE, "ou", ChatStyle.RED, "ty"));
@@ -501,15 +538,14 @@ public class SpoutClient extends SpoutEngine implements Client {
 		tmc.setTranslation(new Vector3(0, 3f, 0));
 		tmc.setFont(font);
 
-		super.getDefaultWorld().spawnEntity(e);
+		getDefaultWorld().spawnEntity(e);
 	}
 
 	public void updateRender(long limit){
 		worldRenderer.update(limit);
 	}
-	
-	public void render(float dt) {
 
+	public void render(float dt) {
 		while(renderTaskQueue.peek() != null) {
 			Runnable task = renderTaskQueue.poll();
 			task.run();
@@ -519,8 +555,11 @@ public class SpoutClient extends SpoutEngine implements Client {
 
 		doInput(dt);
 
-		for (Entity e : super.getDefaultWorld().getAll()) {
-			((PredictableTransformComponent)e.getTransform()).updateRender(dt);
+		World renderWorld = getDefaultWorld();
+		if (renderWorld != null) {
+			for (Entity e : renderWorld.getAll()) {
+				((PredictableTransformComponent)e.getTransform()).updateRender(dt);
+			}
 		}
 
 		activeCamera.updateView();
@@ -528,21 +567,23 @@ public class SpoutClient extends SpoutEngine implements Client {
 		Mouse.setGrabbed(screenStack.getVisibleScreens().getLast().grabsMouse());
 
 		worldRenderer.render();
-		
-		for (Entity e : super.getDefaultWorld().getAll()) {
-			EntityRendererComponent r = e.get(EntityRendererComponent.class);
-			if (r != null) {
-				r.render(activeCamera);
+
+		if (renderWorld != null) {
+			for (Entity e : renderWorld.getAll()) {
+				EntityRendererComponent r = e.get(EntityRendererComponent.class);
+				if (r != null) {
+					r.render(activeCamera);
+				}
 			}
 		}
-		
+
 		if(wireframe) {
 			GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
 		}
 		gui.begin();
-		if (showDebugInfos) {
+		if (showDebugInfos && renderWorld != null) {
 			Point position = activePlayer.getTransform().getPosition();
-			gui.drawText(new ChatArguments("Spout client! Logged as ", ChatStyle.RED, activePlayer.getDisplayName(), ChatStyle.RESET, " in world: ", ChatStyle.RED, getDefaultWorld().getName()), font, -0.95f, 0.9f, 10f);
+			gui.drawText(new ChatArguments("Spout client! Logged as ", ChatStyle.RED, activePlayer.getDisplayName(), ChatStyle.RESET, " in world: ", ChatStyle.RED, renderWorld.getName()), font, -0.95f, 0.9f, 10f);
 			gui.drawText(new ChatArguments(ChatStyle.BLUE, "x: ", position.getX()), font, -0.95f, 0.8f, 8f);
 			gui.drawText(new ChatArguments(ChatStyle.BLUE, "y: ", position.getY()), font, -0.95f, 0.7f, 8f);
 			gui.drawText(new ChatArguments(ChatStyle.BLUE, "z: ", position.getZ()), font, -0.95f, 0.6f, 8f);
@@ -553,17 +594,19 @@ public class SpoutClient extends SpoutEngine implements Client {
 			gui.drawText(new ChatArguments(ChatStyle.BLUE, "Update: ", worldRenderer.minUpdate + " / " + worldRenderer.maxUpdate + " / " + (worldRenderer.sumUpdate / Math.max(1,worldRenderer.count))), font, -0.95f, 0.1f, 8f);
 			gui.drawText(new ChatArguments(ChatStyle.BLUE, "Render: ", worldRenderer.minRender + " / " + worldRenderer.maxRender + " / " + (worldRenderer.sumRender / Math.max(1,worldRenderer.count))), font, -0.95f, 0.0f, 8f);
 		}
+
 		for (Screen screen : screenStack.getVisibleScreens()) {
 			for (Widget widget : screen.getWidgets()) {
 				gui.draw(widget.getRenderParts());
 			}
 		}
 		gui.render();
+
 		if(wireframe) {
 			GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE);
 		}
 
-		if (System.currentTimeMillis()-lastFrameTime>1000) {
+		if (System.currentTimeMillis() - lastFrameTime > 1000) {
 			lastFrameTime = System.currentTimeMillis();
 			fps = frames;
 			frames = 0;
@@ -609,6 +652,7 @@ public class SpoutClient extends SpoutEngine implements Client {
 					ContextAttribs ca = new ContextAttribs(2, 1);
 					Display.create(new PixelFormat(8, 24, 0), ca);
 				} else if (getRenderMode() == RenderMode.GL30) {
+
 					ContextAttribs ca = new ContextAttribs(3, 2).withForwardCompatible(false);
 					Display.create(new PixelFormat(8, 24, 0), ca);
 				}
@@ -626,7 +670,7 @@ public class SpoutClient extends SpoutEngine implements Client {
 				ContextAttribs ca = new ContextAttribs(3, 2).withProfileCore(true);
 				Display.create(new PixelFormat(8, 24, 0), ca);
 			} else {
-				throw new UnsupportedOperationException("Cannot create a 3.0 context without OSX 10.7_");
+				throw new UnsupportedOperationException("Cannot create a 3.0 context without OSX 10.7+");
 			}
 		} else {
 			Display.create();
@@ -672,6 +716,10 @@ public class SpoutClient extends SpoutEngine implements Client {
 	@Override
 	public FileSystem getFilesystem() {
 		return filesystem;
+	}
+
+	public int getFramesPerSecond() {
+		return fps;
 	}
 
 	public void enqueueTask(Runnable task) {

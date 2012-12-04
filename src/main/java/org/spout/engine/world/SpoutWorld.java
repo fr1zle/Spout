@@ -201,7 +201,7 @@ public class SpoutWorld extends AsyncManager implements World {
 		this.engine = engine;
 		if (!StringSanitizer.isAlphaNumericUnderscore(name)) {
 			name = Long.toHexString(System.currentTimeMillis());
-			Spout.getEngine().getLogger().severe("World name " + name + " is not valid, using " + name + " instead");
+			engine.getLogger().severe("World name " + name + " is not valid, using " + name + " instead");
 		}
 		this.name = name;
 		this.uid = uid;
@@ -568,7 +568,7 @@ public class SpoutWorld extends AsyncManager implements World {
 			throw new IllegalStateException("Cannot spawn an entity that has a null region!");
 		}
 		if (region.getEntityManager().isSpawnable((SpoutEntity) e)) {
-			EntitySpawnEvent event = Spout.getEventManager().callEvent(new EntitySpawnEvent(e, e.getTransform().getPosition()));
+			EntitySpawnEvent event = engine.getEventManager().callEvent(new EntitySpawnEvent(e, e.getTransform().getPosition()));
 			if (event.isCancelled()) {
 				return;
 			}
@@ -1160,7 +1160,7 @@ public class SpoutWorld extends AsyncManager implements World {
 	public TaskManager getTaskManager() {
 		return taskManager;
 	}
-	
+
 	private SpoutChunk[][][] getChunks(int x, int y, int z, CuboidBlockMaterialBuffer buffer) {
 		Vector3 size = buffer.getSize();
 
@@ -1182,11 +1182,11 @@ public class SpoutWorld extends AsyncManager implements World {
 		int chunkEndX = end.getX();
 		int chunkEndY = end.getY();
 		int chunkEndZ = end.getZ();
-		
+
 		int chunkSizeX = chunkEndX - chunkStartX + 1;
 		int chunkSizeY = chunkEndY - chunkStartY + 1;
 		int chunkSizeZ = chunkEndZ - chunkStartZ + 1;
-		
+
 		SpoutChunk[][][] chunks = new SpoutChunk[chunkSizeX][chunkSizeY][chunkSizeZ];
 		for (int dx = chunkStartX; dx <= chunkEndX; dx++) {
 			for (int dy = chunkStartY; dy <= chunkEndY; dy++) {
@@ -1226,30 +1226,30 @@ public class SpoutWorld extends AsyncManager implements World {
 			}
 		}
 	}
-	
+
 	@Override
 	public void setCuboid(CuboidBlockMaterialBuffer buffer, Cause<?> cause) {
 		Vector3 base = buffer.getBase();
 		setCuboid(base.getFloorX(), base.getFloorY(), base.getFloorZ(), buffer, cause);
 	}
-	
+
 	@Override
 	public void setCuboid(int x, int y, int z, CuboidBlockMaterialBuffer buffer, Cause<?> cause) {
 		if (cause == null) {
 			throw new NullPointerException("Cause can not be null");
 		}
 		CuboidChangeEvent event = new CuboidChangeEvent(buffer, cause);
-		Spout.getEngine().getEventManager().callEvent(event);
+		engine.getEventManager().callEvent(event);
 		if (event.isCancelled()) {
 			return;
 		}
 
 		SpoutChunk[][][] chunks = getChunks(x, y, z, buffer);
-		
+
 		setCuboid(chunks, x, y, z, buffer, cause);
-		
+
 	}
-	
+
 	protected void setCuboid(SpoutChunk[][][] chunks, int x, int y, int z, CuboidBlockMaterialBuffer buffer, Cause<?> cause) {
 
 		lockChunks(chunks);
@@ -1269,7 +1269,7 @@ public class SpoutWorld extends AsyncManager implements World {
 		}
 
 	}
-	
+
 	@Override
 	public CuboidBlockMaterialBuffer getCuboid(int x, int y, int z, int sx, int sy, int sz) {
 		CuboidBlockMaterialBuffer buffer = new CuboidBlockMaterialBuffer(x, y, z, sx, sy, sz);
@@ -1282,14 +1282,14 @@ public class SpoutWorld extends AsyncManager implements World {
 		Vector3 base = buffer.getBase();
 		getCuboid(base.getFloorX(), base.getFloorY(), base.getFloorZ(), buffer);
 	}
-	
-	@Override 
+
+	@Override
 	public void getCuboid(int x, int y, int z, CuboidBlockMaterialBuffer buffer) {
 		SpoutChunk[][][] chunks = getChunks(x, y, z, buffer);
-		
+
 		getCuboid(chunks, x, y, z, buffer);
 	}
-	
+
 	protected void getCuboid(SpoutChunk[][][] chunks, int x, int y, int z, CuboidBlockMaterialBuffer buffer) {
 
 		lockChunks(chunks);

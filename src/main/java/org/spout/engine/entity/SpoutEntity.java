@@ -339,7 +339,7 @@ public class SpoutEntity extends BaseComponentHolder implements Entity, Snapshot
 		if (isObserver()) {
 			updateObserver();
 		}
-		SpoutRegion region = (SpoutRegion) getTransform().getTransformLive().getPosition().getChunk(LoadOption.LOAD_GEN).getRegion();
+		SpoutRegion region = (SpoutRegion) transform.getPosition().getChunk(LoadOption.LOAD_GEN).getRegion();
 		entityManager.set(region.getEntityManager());
 	}
 

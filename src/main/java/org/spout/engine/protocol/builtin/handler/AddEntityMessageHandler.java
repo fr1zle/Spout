@@ -26,7 +26,6 @@
  */
 package org.spout.engine.protocol.builtin.handler;
 
-import org.spout.api.Client;
 import org.spout.api.component.Component;
 import org.spout.api.entity.Entity;
 import org.spout.api.entity.Player;
@@ -38,10 +37,10 @@ import org.spout.engine.protocol.builtin.SpoutProtocol;
 public class AddEntityMessageHandler extends MessageHandler<AddEntityMessage> {
 	@Override
 	public void handleClient(Session session, AddEntityMessage message) {
-		if(!session.hasPlayer()) {
+		if (!session.hasPlayer()) {
 			return;
 		}
-		System.out.println("Ading entity with id " + message.getEntityId());
+		System.out.println("Adding entity with id " + message.getEntityId());
 
 		Player player = session.getPlayer();
 		Entity newEntity;
@@ -53,6 +52,6 @@ public class AddEntityMessageHandler extends MessageHandler<AddEntityMessage> {
 
 		newEntity.getTransform().setTransform(message.getTransform());
 		//newEntity.setId(message.getEntityId()); // TODO: Allow providing an entity ID to use
-		((Client) session.getEngine()).getDefaultWorld().spawnEntity(newEntity);
+		session.getEngine().getDefaultWorld().spawnEntity(newEntity);
 	}
 }

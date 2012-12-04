@@ -175,7 +175,7 @@ public final class SpoutScheduler implements Scheduler {
 			long lastTick = System.nanoTime();
 
 			long timeError = 0;
-			long maxError = rate >> 2; // time error total limited to 0.25 seconds 
+			long maxError = rate >> 2; // time error total limited to 0.25 seconds
 
 			while (!shutdown) {
 				if (Display.isCloseRequested() || !c.isRendering()) {
@@ -230,7 +230,7 @@ public final class SpoutScheduler implements Scheduler {
 						try {
 							Thread.sleep(delay);
 						} catch (InterruptedException e) {
-							Spout.log("[Severe] Interrupted while sleeping!");
+							engine.getLogger().log(Level.SEVERE, "Interrupted while sleeping!", e);
 						}
 					}
 				}

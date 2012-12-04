@@ -30,10 +30,10 @@ import org.spout.api.Spout;
 import org.spout.api.chat.ChatArguments;
 import org.spout.api.chat.style.ChatStyle;
 import org.spout.api.command.Command;
+import org.spout.api.component.Component;
 import org.spout.api.geo.discrete.Transform;
 import org.spout.api.protocol.Message;
 
-import org.spout.engine.protocol.SpoutSession;
 
 /**
  * A subclass of SpoutPlayer with modifications for the client
@@ -44,19 +44,12 @@ public class SpoutClientPlayer extends SpoutPlayer {
 	}
 
 	public SpoutClientPlayer(String name, Transform transform, int viewDistance) {
-		super(name, transform, viewDistance);
+		super(name, transform, viewDistance, null, false, null, (Class<? extends Component>[]) null);
 	}
 
 	@Override
 	public boolean sendRawMessage(ChatArguments message) {
-		SpoutSession<?> session;
-		try {
-			session = getSession();
-		} catch (IllegalArgumentException iae) {
-			Spout.getEngine().getConsoles().addMessage(message);
-			return true;
-		}
-		session.getEngine().getConsoles().addMessage(message);
+		getSession().getEngine().getConsoles().addMessage(message);
 		return true;
 	}
 

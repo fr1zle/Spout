@@ -39,7 +39,7 @@ public class MemoryReclamationThread extends Thread{
 	private final AtomicInteger numPlayers = new AtomicInteger(0);
 
 	public MemoryReclamationThread() {
-		super("Memory reclaimation thread");
+		super("Memory reclamation thread");
 		setDaemon(true);
 	}
 
@@ -86,7 +86,7 @@ public class MemoryReclamationThread extends Thread{
 				}
 				previousPlayers = numPlayers;
 			}
-			
+
 		}
 	}
 }

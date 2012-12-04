@@ -60,6 +60,7 @@ import org.spout.api.util.thread.Threadsafe;
 
 import org.spout.engine.SpoutConfiguration;
 import org.spout.engine.SpoutEngine;
+import org.spout.engine.SpoutServer;
 import org.spout.engine.filesystem.WorldFiles;
 import org.spout.engine.protocol.SpoutSession;
 import org.spout.engine.world.SpoutWorld;
@@ -195,6 +196,8 @@ public class SpoutPlayer extends SpoutEntity implements Player {
 		Command cmd = rootCmd.getChild(command);
 		if (cmd != null) {
 			cmd.process(this, command, arguments, false);
+		} else {
+			sendMessage(ChatStyle.RED, "Unknown command: ", command);
 		}
 	}
 
@@ -291,10 +294,10 @@ public class SpoutPlayer extends SpoutEntity implements Player {
 
 	@Override
 	public void kick(Object... reason) {
-		if (reason == null) {
+		if (reason == null || reason.length == 0 || reason[0] == null) {
 			reason = new Object[]{ChatStyle.RED, "Kicked from server."};
 		}
-		session.disconnect(reason);
+		getSession().disconnect(reason);
 	}
 
 	@Override
@@ -367,7 +370,9 @@ public class SpoutPlayer extends SpoutEntity implements Player {
 		}
 		if (isRemoved()) {
 			getNetworkSynchronizer().onRemoved();
-			((SpoutEngine) Spout.getEngine()).removePlayer(this);
+			if (Spout.getEngine() instanceof SpoutServer) {
+				((SpoutServer) Spout.getEngine()).removePlayer(this);
+			}
 			sessionLive.set(null);
 		}
 	}

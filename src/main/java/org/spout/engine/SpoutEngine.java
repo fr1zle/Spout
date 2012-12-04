@@ -147,8 +147,7 @@ public abstract class SpoutEngine extends AsyncManager implements Engine {
 	private final EventManager eventManager = new SimpleEventManager();
 	private final RecipeManager recipeManager = new SimpleRecipeManager();
 	private final ServiceManager serviceManager = CommonServiceManager.getInstance();
-	private final SnapshotManager snapshotManager = new SnapshotManager();
-	protected final SnapshotableLinkedHashMap<String, SpoutPlayer> players = new SnapshotableLinkedHashMap<String, SpoutPlayer>(snapshotManager);
+	protected final SnapshotManager snapshotManager = new SnapshotManager();
 	private final WorldGenerator defaultGenerator = new EmptyWorldGenerator();
 	protected final SpoutSessionRegistry sessions = new SpoutSessionRegistry();
 	protected final SpoutScheduler scheduler = new SpoutScheduler(this);
@@ -163,13 +162,11 @@ public abstract class SpoutEngine extends AsyncManager implements Engine {
 	private final SnapshotableLinkedHashMap<String, SpoutWorld> loadedWorlds = new SnapshotableLinkedHashMap<String, SpoutWorld>(snapshotManager);
 	private final SnapshotableReference<World> defaultWorld = new SnapshotableReference<World>(snapshotManager, null);
 	protected final ConcurrentMap<SocketAddress, Protocol> boundProtocols = new ConcurrentHashMap<SocketAddress, Protocol>();
-	protected final SnapshotableLinkedHashMap<String, SpoutPlayer> onlinePlayers = new SnapshotableLinkedHashMap<String, SpoutPlayer>(snapshotManager);
 	private String logFile;
 	private StringMap engineItemMap = null;
 	private StringMap engineBiomeMap = null;
 	private MultiConsole console;
 	private SpoutApplication arguments;
-	private MemoryReclamationThread reclamation = null;
 
 	public SpoutEngine() {
 		super(1, new ThreadAsyncExecutor("Engine bootstrap thread"));
@@ -258,11 +255,8 @@ public abstract class SpoutEngine extends AsyncManager implements Engine {
 			//If we don't have a default world set, just grab one.
 			getDefaultWorld();
 		}
-		
-		if (SpoutConfiguration.RECLAIM_MEMORY.getBoolean()) {
-			reclamation = new MemoryReclamationThread();
-			reclamation.start();
-		}
+
+
 
 		scheduler.startMainThread();
 		WorldSavingThread.startThread();
@@ -305,10 +299,6 @@ public abstract class SpoutEngine extends AsyncManager implements Engine {
 		for (Plugin plugin : pluginManager.getPlugins()) {
 			pluginManager.enablePlugin(plugin);
 		}
-	}
-
-	public Collection<SpoutPlayer> rawGetAllOnlinePlayers() {
-		return players.get().values();
 	}
 
 	@Override
@@ -638,9 +628,6 @@ public abstract class SpoutEngine extends AsyncManager implements Engine {
 	@Override
 	public void copySnapshotRun() throws InterruptedException {
 		snapshotManager.copyAllSnapshots();
-		for (Player player : players.get().values()) {
-			((SpoutPlayer) player).copySnapshot();
-		}
 	}
 
 	@Override
@@ -735,77 +722,7 @@ public abstract class SpoutEngine extends AsyncManager implements Engine {
 
 	@Override
 	public List<String> getAllPlayers() {
-		ArrayList<String> names = new ArrayList<String>();
-		for (Player player : players.getValues()) {
-			names.add(player.getName());
-		}
-		return Collections.unmodifiableList(names);
-	}
-
-	@Override
-	public Player getPlayer(String name, boolean exact) {
-		name = name.toLowerCase();
-		if (exact) {
-			for (Player player : players.getValues()) {
-				if (player.getName().equalsIgnoreCase(name)) {
-					return player;
-				}
-			}
-			return null;
-		} else {
-			return StringUtil.getShortest(StringUtil.matchName(players.getValues(), name));
-		}
-	}
-
-	@Override
-	public Collection<Player> matchPlayer(String name) {
-		//TODO Can someone redo this or make it better?
-		return StringUtil.matchName(Arrays.<Player>asList(players.getValues().toArray(new Player[players.getValues().size()])), name);
-	}
-
-	// Players should use weak map?
-	public Player addPlayer(String playerName, SpoutSession<?> session, int viewDistance) {
-		SpoutPlayer player = WorldFiles.loadPlayerData(playerName);
-		boolean created = false;
-		if (player == null) {
-			player = new SpoutPlayer(playerName, null, viewDistance);
-			created = true;
-		}
-		SpoutPlayer oldPlayer = players.put(playerName, player);
-		
-		if (reclamation != null) {
-			reclamation.addPlayer();
-		}
-
-		if (oldPlayer != null) {
-			oldPlayer.kick("Login occured from another client");
-		}
-
-		//Connect the player and set their transform to the default world's spawn.
-		player.connect(session, created ? getDefaultWorld().getSpawnPoint() : player.getTransform().getTransformLive());
-
-		//Spawn the player in the world
-		World world = player.getTransform().getTransformLive().getPosition().getWorld();
-		world.spawnEntity(player);
-		((SpoutWorld) world).addPlayer(player);
-
-		//Set the player to the session
-		session.setPlayer(player);
-
-		//Initialize the session
-		session.getProtocol().initializeSession(session);
-		return player;
-	}
-
-	public boolean removePlayer(SpoutPlayer player) {
-		boolean remove = players.remove(player.getName(), player);
-		if (remove) {
-			if (reclamation != null) {
-				reclamation.removePlayer();
-			}
-			return true;
-		}
-		return false;
+		return Collections.emptyList();
 	}
 
 	protected Collection<SpoutWorld> getLiveWorlds() {
