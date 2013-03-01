@@ -298,14 +298,19 @@ public class SpoutSceneComponent extends SceneComponent {
 		//TODO: allowing api to setShape more than once could cause tearing/threading issues
 		final RigidBody previous = body;
 		//Calculate inertia
-		final Vector3f inertia = new Vector3f();
+		final Vector3f inertia = new Vector3f(0, 0, 0);
+		shape.setMargin(0.04F / 16);
+		
+		//Scale by 4x
+		shape.setLocalScaling(new Vector3f(16F, 16F, 16F));
+		live.setScale(new Vector3(1/16F, 1/16F, 1/16F), true);
+		
 		shape.calculateLocalInertia(mass, inertia);
 		//Construct body blueprint
 		final RigidBodyConstructionInfo blueprint = new RigidBodyConstructionInfo(mass, new SpoutMotionState(getOwner()), shape, inertia);
 		body = new RigidBody(blueprint);
 		body.setUserPointer(getOwner());
-		body.activate();
-		final SpoutRegion region = simulationRegion.get();
+		SpoutRegion region = simulationRegion.get();
 		if (region != null) {
 			try {
 				region.getPhysicsLock().writeLock().lock();
@@ -376,8 +381,10 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.setRestitution(restitution);
-			updatePhysicsSpace();
+			if (body.getRestitution() != restitution) {
+				body.setRestitution(restitution);
+				updatePhysicsSpace();
+			}
 			return this;
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -391,7 +398,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		try {
 			region.getPhysicsLock().readLock().lock();
 			//TODO Snapshot/live values needed?
-			return VectorMath.toVector3(body.getLinearVelocity(new Vector3f()));
+			return VectorMath.toVector3(body.getLinearVelocity(new Vector3f())).multiply(0.125D);
 		} finally {
 			region.getPhysicsLock().readLock().unlock();
 		}
@@ -403,7 +410,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.setLinearVelocity(VectorMath.toVector3f(velocity));
+			body.setLinearVelocity(VectorMath.toVector3f(velocity.multiply(0.125D)));
 			//TODO May need to perform a Physics space update...testing needed.
 			return this;
 		} finally {
@@ -639,7 +646,7 @@ public class SpoutSceneComponent extends SceneComponent {
 			 */
 			final com.bulletphysics.linearmath.Transform physicsContainer = new com.bulletphysics.linearmath.Transform();
 			scene.getBody().getWorldTransform(physicsContainer);
-			scene.getTransformLive().set(GenericMath.toSceneTransform(liveContainer, physicsContainer));
+			scene.getTransformLive().set(GenericMath.toSceneTransform(liveContainer, physicsContainer).setScale(new Vector3(1/16F, 1/16F, 1/16F)));
 		}
 	}
 }

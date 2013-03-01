@@ -286,8 +286,9 @@ public class SpoutRegion extends Region implements AsyncManager {
 		dispatcher = new CollisionDispatcher(configuration);
 		solver = new SequentialImpulseConstraintSolver();
 		simulation = new DiscreteDynamicsWorld(dispatcher, broadphase, solver, configuration);
-		simulation.setGravity(new Vector3f(0, -9.81F, 0));
-		simulation.getSolverInfo().splitImpulse = true;
+		simulation.setGravity(new Vector3f(0, -9.81F * 16F, 0));
+		//simulation.getSolverInfo().splitImpulse = true;
+
 		final SpoutPhysicsWorld physicsInfo = new SpoutPhysicsWorld(this);
 		final VoxelWorldShape simulationShape = new RegionShape(physicsInfo, this);
 		final Matrix3f rot = new Matrix3f();
@@ -946,8 +947,14 @@ public class SpoutRegion extends Region implements AsyncManager {
 	private void updateDynamics(float dt) {
 		try {
 			lock.writeLock().lock();
+			if (simulation.getNumCollisionObjects() <= 1) {
+				return;
+			}
 			//Simulate physics
-			simulation.stepSimulation(dt, 2);
+			int steps = simulation.stepSimulation(dt, 30, 1/120F);
+			if (steps <= 0) {
+				return;
+			}
 			final Dispatcher dispatcher = simulation.getDispatcher();
 			int manifolds = dispatcher.getNumManifolds();
 			for (int i = 0; i < manifolds; i++) {

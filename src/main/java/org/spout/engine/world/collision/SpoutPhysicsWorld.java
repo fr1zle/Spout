@@ -52,7 +52,7 @@ public class SpoutPhysicsWorld implements VoxelPhysicsWorld {
 
 	@Override
 	public CollisionSnapshot getCollisionShapeAt(int x, int y, int z) {
-		final SpoutBlock block = (SpoutBlock) simulation.getBlock(x, y, z);
+		final SpoutBlock block = (SpoutBlock) simulation.getBlock(x / 16, y / 16, z / 16);
 		return new SpoutVoxelCollisionSnapshot(block.getMaterial(), simulation, block.getPosition());
 	}
 
@@ -64,6 +64,9 @@ public class SpoutPhysicsWorld implements VoxelPhysicsWorld {
 
 		public SpoutVoxelCollisionSnapshot(BlockMaterial material, Region region, Vector3 position) {
 			this.shape = material.getCollisionShape();
+			if (this.shape != null) {
+				this.shape.setLocalScaling(new Vector3f(16, 16, 16));
+			}
 			this.isColliding = shape != null && material.getCollisionModel().getStrategy() != CollisionStrategy.NOCOLLIDE;
 			this.isBlocking = shape != null && material.getCollisionModel().getStrategy() == CollisionStrategy.SOLID;
 			this.position = position;
