@@ -85,7 +85,7 @@ import org.spout.api.material.DynamicUpdateEntry;
 import org.spout.api.material.MaterialRegistry;
 import org.spout.api.material.block.BlockFace;
 import org.spout.api.material.range.EffectRange;
-import org.spout.api.math.Vector3;
+import org.spout.api.math.BulletConverter;
 import org.spout.api.protocol.NetworkSynchronizer;
 import org.spout.api.render.RenderMaterial;
 import org.spout.api.scheduler.TaskManager;
@@ -104,6 +104,7 @@ import org.spout.api.util.map.TInt21TripleObjectHashMap;
 import org.spout.api.util.set.TByteTripleHashSet;
 import org.spout.api.util.thread.annotation.DelayedWrite;
 import org.spout.api.util.thread.annotation.LiveRead;
+
 import org.spout.engine.SpoutClient;
 import org.spout.engine.SpoutConfiguration;
 import org.spout.engine.entity.EntityManager;
@@ -121,6 +122,9 @@ import org.spout.engine.world.collision.RegionShape;
 import org.spout.engine.world.collision.SpoutPhysicsWorld;
 import org.spout.engine.world.dynamic.DynamicBlockUpdate;
 import org.spout.engine.world.dynamic.DynamicBlockUpdateTree;
+
+import org.spout.math.GenericMath;
+import org.spout.math.Vector3;
 
 import com.bulletphysics.collision.broadphase.BroadphaseInterface;
 import com.bulletphysics.collision.broadphase.DbvtBroadphase;
@@ -140,8 +144,6 @@ import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.dynamics.constraintsolver.SequentialImpulseConstraintSolver;
 import com.bulletphysics.linearmath.DefaultMotionState;
 import com.bulletphysics.linearmath.Transform;
-import org.spout.api.math.GenericMath;
-import org.spout.api.math.VectorMath;
 
 public class SpoutRegion extends Region implements AsyncManager {
 	private AtomicInteger numberActiveChunks = new AtomicInteger();
@@ -234,7 +236,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 		int zz = GenericMath.mod(getZ(), 3);
 		updateSequence = (xx * 9) + (yy * 3) + zz;
 
-		if (Spout.getPlatform() == Platform.CLIENT) {
+		if (world.getEngine().getPlatform() == Platform.CLIENT) {
 			meshThread = new ArrayList<Thread>();
 			for(int i = 0; i < 1; i++ ){//TODO : Make a option to choice the number of thread to make mesh
 				meshThread.add(new MeshGeneratorThread());
@@ -970,9 +972,9 @@ public class SpoutRegion extends Region implements AsyncManager {
 						continue;
 					}
 					//3D position where colliderA contacted colliderB
-					Point contactPointA = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnA(new Vector3f())), getWorld());
+					Point contactPointA = new Point(BulletConverter.toVector3(bulletPoint.getPositionWorldOnA(new Vector3f())), getWorld());
 					//3D position where colliderB contacted colliderA
-					Point contactPointB = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnB(new Vector3f())), getWorld());
+					Point contactPointB = new Point(BulletConverter.toVector3(bulletPoint.getPositionWorldOnB(new Vector3f())), getWorld());
 
 					//Resolve Entity -> Entity Collisions
 					if (holderA instanceof Entity) {
@@ -1871,7 +1873,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 
 	public void setGravity(Vector3 gravity) {
 		synchronized(simulation) {
-			simulation.setGravity(VectorMath.toVector3f(gravity));
+			simulation.setGravity(BulletConverter.toVector3f(gravity));
 		}
 	}
 
@@ -1879,7 +1881,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 		synchronized(simulation) {
 			Vector3f vector = new Vector3f();
 			vector = simulation.getGravity(vector);
-			return VectorMath.toVector3(vector);
+			return BulletConverter.toVector3(vector);
 		}
 	}
 

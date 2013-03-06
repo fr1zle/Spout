@@ -34,7 +34,8 @@ import org.lwjgl.openal.AL10;
 import org.spout.api.audio.SoundListener;
 import org.spout.api.geo.World;
 import org.spout.api.geo.discrete.Point;
-import org.spout.api.math.Vector3;
+
+import org.spout.math.Vector3;
 
 public class SpoutSoundListener implements SoundListener {
 	private World world;

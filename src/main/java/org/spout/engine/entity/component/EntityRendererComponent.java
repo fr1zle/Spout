@@ -27,12 +27,13 @@
 package org.spout.engine.entity.component;
 
 import org.spout.api.component.impl.ModelHolderComponent;
-import org.spout.api.math.Matrix;
 import org.spout.api.model.Model;
 import org.spout.api.render.RenderMaterial;
 import org.spout.api.render.effect.SnapshotEntity;
 
 import org.spout.engine.mesh.BaseMesh;
+
+import org.spout.math.Matrix;
 
 public class EntityRendererComponent extends ModelHolderComponent {
 	private SpoutAnimationComponent animationComponent;

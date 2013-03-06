@@ -30,8 +30,9 @@ import java.nio.FloatBuffer;
 
 import org.lwjgl.opengl.GL20;
 
-import org.spout.api.math.Matrix;
 import org.spout.engine.SpoutRenderer;
+
+import org.spout.math.Matrix;
 
 public class Mat2ShaderVariable extends ShaderVariable {
 	public static final FloatBuffer buffer = FloatBuffer.allocate(4);

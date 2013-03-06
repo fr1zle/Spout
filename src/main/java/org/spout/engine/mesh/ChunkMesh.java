@@ -43,7 +43,6 @@ import org.spout.api.geo.discrete.Point;
 import org.spout.api.material.BlockMaterial;
 import org.spout.api.material.Material;
 import org.spout.api.material.block.BlockFace;
-import org.spout.api.math.Vector3;
 import org.spout.api.model.mesh.MeshFace;
 import org.spout.api.model.mesh.OrientedMesh;
 import org.spout.api.model.mesh.OrientedMeshFace;
@@ -53,8 +52,11 @@ import org.spout.api.render.RenderMaterial;
 import org.spout.api.render.effect.BufferEffect;
 import org.spout.api.render.effect.SnapshotMesh;
 import org.spout.api.util.bytebit.ByteBitSet;
+
 import org.spout.engine.renderer.vertexformat.vertexattributes.VertexAttributes;
 import org.spout.engine.world.SpoutChunkSnapshotModel;
+
+import org.spout.math.Vector3;
 
 /**
  * Represents a mesh for a chunk.

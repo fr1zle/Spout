@@ -65,8 +65,6 @@ import org.spout.api.event.engine.EngineStopEvent;
 import org.spout.api.geo.World;
 import org.spout.api.geo.cuboid.Chunk;
 import org.spout.api.gui.ScreenStack;
-import org.spout.api.math.Vector2;
-import org.spout.api.math.Vector3;
 import org.spout.api.model.Model;
 import org.spout.api.model.animation.Animation;
 import org.spout.api.model.animation.AnimationPlayed;
@@ -94,6 +92,9 @@ import org.spout.engine.resources.ClientFont;
 import org.spout.engine.scheduler.SpoutScheduler;
 import org.spout.engine.util.thread.threadfactory.NamedThreadFactory;
 import org.spout.engine.world.SpoutClientWorld;
+
+import org.spout.math.Vector2;
+import org.spout.math.Vector3;
 
 public class SpoutClient extends SpoutEngine implements Client {
 	private final SoundManager soundManager = new SpoutSoundManager();

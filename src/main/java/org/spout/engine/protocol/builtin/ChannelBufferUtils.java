@@ -37,8 +37,9 @@ import org.spout.api.chat.style.ChatStyle;
 import org.spout.api.geo.World;
 import org.spout.api.geo.discrete.Point;
 import org.spout.api.geo.discrete.Transform;
-import org.spout.api.math.Quaternion;
-import org.spout.api.math.Vector3;
+
+import org.spout.math.Quaternion;
+import org.spout.math.Vector3;
 
 /**
  * Various utility methods to help with writing objects to a ChannelBuffer

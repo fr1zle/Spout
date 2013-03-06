@@ -37,9 +37,6 @@ import java.util.regex.Pattern;
 import org.yaml.snakeyaml.Yaml;
 
 import org.spout.api.Spout;
-import org.spout.api.math.Vector2;
-import org.spout.api.math.Vector3;
-import org.spout.api.math.Vector4;
 import org.spout.api.plugin.CommonClassLoader;
 import org.spout.api.render.Shader;
 import org.spout.api.render.Texture;
@@ -49,6 +46,10 @@ import org.spout.api.resource.Resource;
 import org.spout.api.util.typechecker.TypeChecker;
 
 import org.spout.engine.resources.ClientRenderMaterial;
+
+import org.spout.math.Vector2;
+import org.spout.math.Vector3;
+import org.spout.math.Vector4;
 
 public class RenderMaterialLoader extends BasicResourceLoader<ClientRenderMaterial> {
 	@Override

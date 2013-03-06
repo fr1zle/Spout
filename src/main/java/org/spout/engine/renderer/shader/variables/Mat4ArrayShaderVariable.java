@@ -31,8 +31,9 @@ import java.nio.FloatBuffer;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL20;
 
-import org.spout.api.math.Matrix;
 import org.spout.engine.SpoutRenderer;
+
+import org.spout.math.Matrix;
 
 public class Mat4ArrayShaderVariable extends ShaderVariable {
 	Matrix[] value;

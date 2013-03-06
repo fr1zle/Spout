@@ -31,13 +31,15 @@ import org.spout.api.geo.World;
 import org.spout.api.geo.cuboid.Chunk;
 import org.spout.api.geo.cuboid.Cuboid;
 import org.spout.api.geo.discrete.Point;
-import org.spout.api.math.Matrix;
-import org.spout.api.math.MatrixMath;
-import org.spout.api.math.Vector3;
 import org.spout.api.render.BufferContainer;
 import org.spout.api.render.RenderMaterial;
+
 import org.spout.engine.mesh.ChunkMesh;
 import org.spout.engine.renderer.BatchVertexRenderer;
+
+import org.spout.math.Matrix;
+import org.spout.math.MatrixMath;
+import org.spout.math.Vector3;
 
 /**
  * Represents a group of chunk meshes to be rendered.

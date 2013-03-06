@@ -72,9 +72,6 @@ import org.spout.api.lighting.LightingManager;
 import org.spout.api.material.BlockMaterial;
 import org.spout.api.material.DynamicUpdateEntry;
 import org.spout.api.material.range.EffectRange;
-import org.spout.api.math.GenericMath;
-import org.spout.api.math.Quaternion;
-import org.spout.api.math.Vector3;
 import org.spout.api.model.Model;
 import org.spout.api.scheduler.TaskManager;
 import org.spout.api.util.StringMap;
@@ -99,6 +96,10 @@ import org.spout.engine.scheduler.SpoutTaskManager;
 import org.spout.engine.util.thread.AsyncManager;
 import org.spout.engine.util.thread.snapshotable.SnapshotManager;
 import org.spout.engine.util.thread.snapshotable.SnapshotableLong;
+
+import org.spout.math.GenericMath;
+import org.spout.math.Quaternion;
+import org.spout.math.Vector3;
 
 public class SpoutWorld extends BaseComponentHolder implements AsyncManager, World {
 	private SnapshotManager snapshotManager = new SnapshotManager();
@@ -236,7 +237,7 @@ public class SpoutWorld extends BaseComponentHolder implements AsyncManager, Wor
 		spawnLocation.set(new Transform(new Point(this, 1, 100, 1), Quaternion.IDENTITY, Vector3.ONE));
 		selfReference = new WeakReference<World>(this);
 
-		((SpoutScheduler) getEngine().getScheduler()).addAsyncManager(this);
+		getEngine().getScheduler().addAsyncManager(this);
 	}
 
 	@Override

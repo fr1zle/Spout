@@ -43,9 +43,10 @@ import org.spout.api.gui.Widget;
 import org.spout.api.gui.component.ControlComponent;
 import org.spout.api.gui.render.RenderPartPack;
 import org.spout.api.math.IntVector2;
-import org.spout.api.math.Rectangle;
 
 import org.spout.engine.batcher.SpriteBatch;
+
+import org.spout.math.Rectangle;
 
 public class SpoutWidget extends BaseComponentHolder implements Widget {
 	private List<RenderPartPack> renderPartCache = new LinkedList<RenderPartPack>();

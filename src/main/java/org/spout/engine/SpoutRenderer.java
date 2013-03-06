@@ -55,10 +55,6 @@ import org.spout.api.gui.ScreenStack;
 import org.spout.api.gui.Widget;
 import org.spout.api.gui.render.RenderPart;
 import org.spout.api.gui.render.RenderPartPack;
-import org.spout.api.math.Matrix;
-import org.spout.api.math.MatrixMath;
-import org.spout.api.math.Rectangle;
-import org.spout.api.math.Vector2;
 import org.spout.api.model.Model;
 import org.spout.api.render.RenderMaterial;
 import org.spout.api.render.RenderMode;
@@ -77,6 +73,11 @@ import org.spout.engine.renderer.WorldRenderer;
 import org.spout.engine.resources.ClientRenderMaterial;
 import org.spout.engine.resources.ClientRenderTexture;
 import org.spout.engine.util.MacOSXUtils;
+
+import org.spout.math.Matrix;
+import org.spout.math.MatrixMath;
+import org.spout.math.Rectangle;
+import org.spout.math.Vector2;
 
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;

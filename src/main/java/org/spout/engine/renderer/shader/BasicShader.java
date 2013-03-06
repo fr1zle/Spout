@@ -30,8 +30,10 @@ import java.nio.FloatBuffer;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
-import org.spout.api.math.Matrix;
+
 import org.spout.engine.renderer.shader.variables.Mat4ShaderVariable;
+
+import org.spout.math.Matrix;
 
 public class BasicShader extends ClientShader {
 	FloatBuffer matrixBuffer = BufferUtils.createFloatBuffer(4 * 4);

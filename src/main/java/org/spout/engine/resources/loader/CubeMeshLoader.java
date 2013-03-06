@@ -30,10 +30,11 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-import org.spout.api.math.Vector2;
 import org.spout.api.model.mesh.CubeMeshFactory;
 import org.spout.api.model.mesh.OrientedMesh;
 import org.spout.api.resource.BasicResourceLoader;
+
+import org.spout.math.Vector2;
 
 public class CubeMeshLoader extends BasicResourceLoader<OrientedMesh> {
 

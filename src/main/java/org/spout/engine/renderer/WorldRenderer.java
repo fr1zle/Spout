@@ -28,29 +28,28 @@ package org.spout.engine.renderer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import org.lwjgl.Sys;
 import org.spout.api.Client;
 import org.spout.api.Spout;
 import org.spout.api.geo.World;
-import org.spout.api.math.Vector3;
 import org.spout.api.render.BufferContainer;
 import org.spout.api.render.RenderMaterial;
 import org.spout.api.render.effect.SnapshotRender;
 import org.spout.api.util.map.TInt21TripleObjectHashMap;
+
 import org.spout.engine.batcher.ChunkMeshBatchAggregator;
 import org.spout.engine.mesh.ChunkMesh;
 import org.spout.engine.world.SpoutWorld;
+
+import org.spout.math.Vector3;
 
 public class WorldRenderer {
 	public static final long TIME_LIMIT = 2;

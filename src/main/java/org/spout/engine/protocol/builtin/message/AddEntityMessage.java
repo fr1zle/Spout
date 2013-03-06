@@ -34,10 +34,11 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.spout.api.Spout;
 import org.spout.api.geo.discrete.Point;
 import org.spout.api.geo.discrete.Transform;
-import org.spout.api.math.Quaternion;
-import org.spout.api.math.Vector3;
 import org.spout.api.protocol.reposition.RepositionManager;
 import org.spout.api.util.SpoutToStringStyle;
+
+import org.spout.math.Quaternion;
+import org.spout.math.Vector3;
 
 public class AddEntityMessage extends SpoutMessage {
 	private final int entityId;

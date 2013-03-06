@@ -55,7 +55,6 @@ import org.spout.api.geo.cuboid.Block;
 import org.spout.api.geo.discrete.Point;
 import org.spout.api.geo.discrete.Transform;
 import org.spout.api.material.BlockMaterial;
-import org.spout.api.math.Vector3;
 import org.spout.api.model.Model;
 import org.spout.api.model.animation.Animation;
 import org.spout.api.model.animation.Skeleton;
@@ -66,6 +65,7 @@ import org.spout.engine.SpoutEngine;
 import org.spout.engine.entity.SpoutPlayer;
 import org.spout.engine.entity.component.EntityRendererComponent;
 import org.spout.engine.util.thread.AsyncExecutorUtils;
+import org.spout.math.Vector3;
 
 public class TestCommands {
 	private final SpoutEngine engine;

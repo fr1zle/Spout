@@ -41,12 +41,12 @@ import org.spout.api.entity.Entity;
 import org.spout.api.geo.World;
 import org.spout.api.geo.discrete.Point;
 import org.spout.api.geo.discrete.Transform;
-import org.spout.api.math.GenericMath;
-import org.spout.api.math.Quaternion;
-import org.spout.api.math.Vector3;
-import org.spout.api.math.VectorMath;
+import org.spout.api.math.BulletConverter;
 
 import org.spout.engine.world.SpoutRegion;
+
+import org.spout.math.Quaternion;
+import org.spout.math.Vector3;
 
 /**
  * The Spout implementation of {@link SceneComponent}.
@@ -183,7 +183,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.applyImpulse(VectorMath.toVector3f(impulse), VectorMath.toVector3f(offset));
+			body.applyImpulse(BulletConverter.toVector3f(impulse), BulletConverter.toVector3f(offset));
 			return this;
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -196,7 +196,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.applyCentralImpulse(VectorMath.toVector3f(impulse));
+			body.applyCentralImpulse(BulletConverter.toVector3f(impulse));
 			return this;
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -209,7 +209,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.applyForce(VectorMath.toVector3f(force), VectorMath.toVector3f(offset));
+			body.applyForce(BulletConverter.toVector3f(force), BulletConverter.toVector3f(offset));
 			return this;
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -222,7 +222,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.applyCentralForce(VectorMath.toVector3f(force));
+			body.applyCentralForce(BulletConverter.toVector3f(force));
 			return this;
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -235,7 +235,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.applyTorque(VectorMath.toVector3f(torque));
+			body.applyTorque(BulletConverter.toVector3f(torque));
 			return this;
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -248,7 +248,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.applyTorqueImpulse(VectorMath.toVector3f(torque));
+			body.applyTorqueImpulse(BulletConverter.toVector3f(torque));
 			return this;
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -391,7 +391,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		try {
 			region.getPhysicsLock().readLock().lock();
 			//TODO Snapshot/live values needed?
-			return VectorMath.toVector3(body.getLinearVelocity(new Vector3f()));
+			return BulletConverter.toVector3(body.getLinearVelocity(new Vector3f()));
 		} finally {
 			region.getPhysicsLock().readLock().unlock();
 		}
@@ -403,7 +403,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.setLinearVelocity(VectorMath.toVector3f(velocity));
+			body.setLinearVelocity(BulletConverter.toVector3f(velocity));
 			//TODO May need to perform a Physics space update...testing needed.
 			return this;
 		} finally {
@@ -418,7 +418,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		try {
 			region.getPhysicsLock().readLock().lock();
 			//TODO Snapshot/live values needed?
-			return VectorMath.toVector3(body.getAngularVelocity(new Vector3f()));
+			return BulletConverter.toVector3(body.getAngularVelocity(new Vector3f()));
 		} finally {
 			region.getPhysicsLock().readLock().unlock();
 		}
@@ -430,7 +430,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.setAngularVelocity(VectorMath.toVector3f(velocity));
+			body.setAngularVelocity(BulletConverter.toVector3f(velocity));
 			//TODO May need to perform a Physics space update...testing needed.
 			return this;
 		} finally {
@@ -516,11 +516,11 @@ public class SpoutSceneComponent extends SceneComponent {
 
 	/**
 	 * Interpolates the render transform for Spout rendering. This only kicks in when the entity has no body.
-	 * @param dt time since last interpolation.
+	 * @param d time since last interpolation.
 	 */
-	public void interpolateRender(float dtp) {
+	public void interpolateRender(float d) {
 		
-		float dt = dtp*80f/20f;
+		float dt = d * 80f/20f;
 		
 		render.setPosition(render.getPosition().multiply(1-dt).add(position.multiply(dt)));
 		Quaternion q = render.getRotation();
@@ -581,7 +581,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.setWorldTransform(GenericMath.toPhysicsTransform(live));
+			body.setWorldTransform(BulletConverter.toPhysicsTransform(live));
 			body.clearForces(); //TODO May not be correct here, needs testing.
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -592,7 +592,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		private final SpoutSceneComponent scene;
 
 		public SpoutMotionState(Entity entity) {
-			super(GenericMath.toPhysicsTransform(((SpoutSceneComponent) entity.getScene()).getTransformLive()));
+			super(BulletConverter.toPhysicsTransform(((SpoutSceneComponent) entity.getScene()).getTransformLive()));
 			this.scene = (SpoutSceneComponent) entity.getScene();
 		}
 
@@ -604,7 +604,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		 */
 		@Override
 		public com.bulletphysics.linearmath.Transform getWorldTransform(com.bulletphysics.linearmath.Transform out) {
-			final com.bulletphysics.linearmath.Transform physicsTransform = GenericMath.toPhysicsTransform(scene.getTransformLive());
+			final com.bulletphysics.linearmath.Transform physicsTransform = BulletConverter.toPhysicsTransform(scene.getTransformLive());
 			out.set(physicsTransform);
 			return out;
 		}
@@ -628,7 +628,7 @@ public class SpoutSceneComponent extends SceneComponent {
 				The Transform passed into this method has been interpolated, ready for graphics. We don't set it to the live
 				as live needs to be the transform from the last physics tick. We will handle this momentarily.
 			 */
-			scene.getRenderTransform().set(GenericMath.toSceneTransform(liveContainer, in));
+			scene.getRenderTransform().set(BulletConverter.toSceneTransform(liveContainer, in));
 			/*
 				Now we will set the Scene's live transform to that of the Physics' transform.
 
@@ -639,7 +639,7 @@ public class SpoutSceneComponent extends SceneComponent {
 			 */
 			final com.bulletphysics.linearmath.Transform physicsContainer = new com.bulletphysics.linearmath.Transform();
 			scene.getBody().getWorldTransform(physicsContainer);
-			scene.getTransformLive().set(GenericMath.toSceneTransform(liveContainer, physicsContainer));
+			scene.getTransformLive().set(BulletConverter.toSceneTransform(liveContainer, physicsContainer));
 		}
 	}
 }

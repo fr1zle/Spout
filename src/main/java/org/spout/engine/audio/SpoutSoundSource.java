@@ -36,7 +36,8 @@ import org.lwjgl.openal.AL11;
 import org.spout.api.audio.Sound;
 import org.spout.api.audio.SoundSource;
 import org.spout.api.audio.SoundState;
-import org.spout.api.math.Vector3;
+
+import org.spout.math.Vector3;
 
 /**
  * Represents a source of sound in the game backed by OpenAL.

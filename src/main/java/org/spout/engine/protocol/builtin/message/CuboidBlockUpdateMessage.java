@@ -29,8 +29,9 @@ package org.spout.engine.protocol.builtin.message;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.spout.api.math.Vector3;
 import org.spout.api.util.SpoutToStringStyle;
+
+import org.spout.math.Vector3;
 
 public class CuboidBlockUpdateMessage extends SpoutMessage {
 	private final int minX, minY, minZ;

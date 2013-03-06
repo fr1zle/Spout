@@ -41,11 +41,12 @@ import org.spout.api.gui.component.LabelComponent;
 import org.spout.api.gui.component.RenderPartsHolderComponent;
 import org.spout.api.gui.render.RenderPart;
 import org.spout.api.gui.render.RenderPartPack;
-import org.spout.api.math.Rectangle;
 import org.spout.api.meta.SpoutMetaPlugin;
 import org.spout.api.plugin.CommonPluginManager;
 import org.spout.api.render.Font;
 import org.spout.api.render.SpoutRenderMaterials;
+
+import org.spout.math.Rectangle;
 
 public class DevConsole extends Screen implements Console {
 	// The Internal Spout-dummy plugin

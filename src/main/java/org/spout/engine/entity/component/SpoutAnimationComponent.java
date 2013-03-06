@@ -38,8 +38,6 @@ import org.spout.api.Spout;
 import org.spout.api.component.impl.AnimationComponent;
 import org.spout.api.component.impl.ModelHolderComponent;
 import org.spout.api.event.entity.AnimationEndEvent;
-import org.spout.api.math.Matrix;
-import org.spout.api.math.MatrixMath;
 import org.spout.api.model.Model;
 import org.spout.api.model.animation.Animation;
 import org.spout.api.model.animation.AnimationPlayed;
@@ -47,6 +45,9 @@ import org.spout.api.model.animation.Skeleton;
 import org.spout.api.render.RenderMaterial;
 
 import org.spout.engine.mesh.BaseMesh;
+
+import org.spout.math.Matrix;
+import org.spout.math.MatrixMath;
 
 public class SpoutAnimationComponent extends AnimationComponent {
 	private final static Matrix identity = MatrixMath.createIdentity();

@@ -42,7 +42,8 @@ import org.spout.api.audio.SoundListener;
 import org.spout.api.audio.SoundManager;
 import org.spout.api.audio.SoundSource;
 import org.spout.api.geo.discrete.Point;
-import org.spout.api.math.Vector3;
+
+import org.spout.math.Vector3;
 
 public class SpoutSoundManager implements SoundManager {
 	private final Set<SoundSource> sources = new HashSet<SoundSource>();

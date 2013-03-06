@@ -47,10 +47,11 @@ import org.spout.api.material.Material;
 import org.spout.api.material.block.BlockFace;
 import org.spout.api.material.range.EffectRange;
 import org.spout.api.material.source.DataSource;
-import org.spout.api.math.GenericMath;
 import org.spout.api.math.IntVector3;
-import org.spout.api.math.Vector3;
 import org.spout.api.util.StringUtil;
+
+import org.spout.math.GenericMath;
+import org.spout.math.Vector3;
 
 public class SpoutBlock implements Block {
 	private final int x, y, z;

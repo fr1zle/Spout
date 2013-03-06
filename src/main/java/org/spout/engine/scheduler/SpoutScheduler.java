@@ -48,7 +48,6 @@ import org.spout.api.Client;
 import org.spout.api.Engine;
 import org.spout.api.Spout;
 import org.spout.api.gui.ScreenStack;
-import org.spout.api.math.Vector2;
 import org.spout.api.plugin.CommonPlugin;
 import org.spout.api.plugin.Plugin;
 import org.spout.api.scheduler.Scheduler;
@@ -57,6 +56,7 @@ import org.spout.api.scheduler.TaskPriority;
 import org.spout.api.scheduler.TickStage;
 import org.spout.api.scheduler.Worker;
 import org.spout.api.util.thread.annotation.DelayedWrite;
+
 import org.spout.engine.SpoutClient;
 import org.spout.engine.SpoutConfiguration;
 import org.spout.engine.SpoutEngine;
@@ -77,6 +77,7 @@ import org.spout.engine.util.thread.snapshotable.SnapshotManager;
 import org.spout.engine.util.thread.snapshotable.SnapshotableArrayList;
 import org.spout.engine.util.thread.threadfactory.NamedThreadFactory;
 
+import org.spout.math.Vector2;
 /**
  * A class which handles scheduling for the engine {@link SpoutTask}s.<br>
  * <br>

@@ -39,13 +39,8 @@ import org.lwjgl.opengl.GL20;
 
 import org.spout.api.Client;
 import org.spout.api.Spout;
-import org.spout.api.math.Matrix;
-import org.spout.api.math.Vector2;
-import org.spout.api.math.Vector3;
-import org.spout.api.math.Vector4;
 import org.spout.api.render.RenderMaterial;
 import org.spout.api.render.RenderMode;
-import org.spout.api.render.Shader;
 import org.spout.api.render.Texture;
 import org.spout.api.resource.Resource;
 
@@ -65,6 +60,11 @@ import org.spout.engine.renderer.shader.variables.Vec2ShaderVariable;
 import org.spout.engine.renderer.shader.variables.Vec3ShaderVariable;
 import org.spout.engine.renderer.shader.variables.Vec4ShaderVariable;
 import org.spout.engine.renderer.shader.variables.Vector3ArrayShaderVariable;
+
+import org.spout.math.Matrix;
+import org.spout.math.Vector2;
+import org.spout.math.Vector3;
+import org.spout.math.Vector4;
 
 /**
  * Represents a Shader Object in OpenGL

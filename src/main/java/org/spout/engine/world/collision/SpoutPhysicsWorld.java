@@ -35,10 +35,11 @@ import com.bulletphysics.collision.shapes.voxel.VoxelPhysicsWorld;
 import org.spout.api.collision.CollisionStrategy;
 import org.spout.api.geo.cuboid.Region;
 import org.spout.api.material.BlockMaterial;
-import org.spout.api.math.Vector3;
 
 import org.spout.engine.world.SpoutBlock;
 import org.spout.engine.world.SpoutRegion;
+
+import org.spout.math.Vector3;
 
 public class SpoutPhysicsWorld implements VoxelPhysicsWorld {
 	private final SpoutRegion simulation;
