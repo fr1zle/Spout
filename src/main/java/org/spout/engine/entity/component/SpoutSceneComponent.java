@@ -26,15 +26,9 @@
  */
 package org.spout.engine.entity.component;
 
-import javax.vecmath.Vector3f;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.bulletphysics.collision.dispatch.CollisionObject;
-import com.bulletphysics.collision.shapes.CollisionShape;
-import com.bulletphysics.dynamics.RigidBody;
-import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
-import com.bulletphysics.linearmath.DefaultMotionState;
-
+import org.lwjgl.util.vector.Vector3f;
 import org.spout.api.ClientOnly;
 import org.spout.api.component.impl.SceneComponent;
 import org.spout.api.entity.Entity;
@@ -45,17 +39,32 @@ import org.spout.api.math.GenericMath;
 import org.spout.api.math.Quaternion;
 import org.spout.api.math.Vector3;
 import org.spout.api.math.VectorMath;
-
 import org.spout.engine.world.SpoutRegion;
+
+import com.badlogic.gdx.physics.bullet.btCollisionDispatcher;
+import com.badlogic.gdx.physics.bullet.btCollisionObject.CollisionFlags;
+import com.badlogic.gdx.physics.bullet.btCollisionObject;
+import com.badlogic.gdx.physics.bullet.btCollisionShape;
+import com.badlogic.gdx.physics.bullet.btDefaultMotionState;
+import com.badlogic.gdx.physics.bullet.btRigidBody;
+import com.badlogic.gdx.physics.bullet.btRigidBodyConstructionInfo;
+import com.badlogic.gdx.physics.bullet.btRigidBodyFlags;
+import com.badlogic.gdx.physics.bullet.btTransform;
 
 /**
  * The Spout implementation of {@link SceneComponent}.
  */
 public class SpoutSceneComponent extends SceneComponent {
+	public static final int ACTIVE_TAG = 1;
+	public static final int ISLAND_SLEEPING = 2;
+	public static final int WANTS_DEACTIVATION = 3;
+	public static final int DISABLE_DEACTIVATION = 4;
+	public static final int DISABLE_SIMULATION = 5;
+
 	private final Transform snapshot = new Transform();
 	private final Transform live = new Transform();
 	private final AtomicReference<SpoutRegion> simulationRegion = new AtomicReference<SpoutRegion>(null);
-	private RigidBody body;
+	private btRigidBody body;
 
 	//Client/Rendering
 	private final Transform render = new Transform();
@@ -282,7 +291,7 @@ public class SpoutSceneComponent extends SceneComponent {
 	}
 
 	@Override
-	public CollisionShape getShape() {
+	public btCollisionShape getShape() {
 		final SpoutRegion region = simulationRegion.get();
 		validateBody(region);
 		try {
@@ -294,15 +303,15 @@ public class SpoutSceneComponent extends SceneComponent {
 	}
 
 	@Override
-	public SceneComponent setShape(final float mass, final CollisionShape shape) {
+	public SceneComponent setShape(final float mass, final btCollisionShape shape) {
 		//TODO: allowing api to setShape more than once could cause tearing/threading issues
-		final RigidBody previous = body;
+		final btRigidBody previous = body;
 		//Calculate inertia
-		final Vector3f inertia = new Vector3f();
+		final com.badlogic.gdx.math.Vector3 inertia = new com.badlogic.gdx.math.Vector3();
 		shape.calculateLocalInertia(mass, inertia);
 		//Construct body blueprint
-		final RigidBodyConstructionInfo blueprint = new RigidBodyConstructionInfo(mass, new SpoutMotionState(getOwner()), shape, inertia);
-		body = new RigidBody(blueprint);
+		final btRigidBodyConstructionInfo blueprint = new btRigidBodyConstructionInfo(mass, new SpoutMotionState(getOwner()), shape, inertia);
+		body = new btRigidBody(blueprint);
 		body.setUserPointer(getOwner());
 		body.activate();
 		final SpoutRegion region = simulationRegion.get();
@@ -391,7 +400,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		try {
 			region.getPhysicsLock().readLock().lock();
 			//TODO Snapshot/live values needed?
-			return VectorMath.toVector3(body.getLinearVelocity(new Vector3f()));
+			return VectorMath.toVector3(body.getLinearVelocity());
 		} finally {
 			region.getPhysicsLock().readLock().unlock();
 		}
@@ -418,7 +427,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		try {
 			region.getPhysicsLock().readLock().lock();
 			//TODO Snapshot/live values needed?
-			return VectorMath.toVector3(body.getAngularVelocity(new Vector3f()));
+			return VectorMath.toVector3(body.getAngularVelocity());
 		} finally {
 			region.getPhysicsLock().readLock().unlock();
 		}
@@ -444,7 +453,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.setActivationState(activate == true ? CollisionObject.ACTIVE_TAG : CollisionObject.DISABLE_SIMULATION);
+			body.setActivationState(activate == true ? ACTIVE_TAG : DISABLE_SIMULATION);
 			return this;
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -453,7 +462,7 @@ public class SpoutSceneComponent extends SceneComponent {
 
 	@Override
 	public boolean isActivated() {
-		return body != null && body.getActivationState() == CollisionObject.ACTIVE_TAG;
+		return body != null && body.getActivationState() == ACTIVE_TAG;
 	}
 
 	/**
@@ -480,10 +489,10 @@ public class SpoutSceneComponent extends SceneComponent {
 	}
 
 	/**
-	 * Gets the {@link RigidBody} that this {@link Entity} has within Physics space.
+	 * Gets the {@link btRigidBody} that this {@link Entity} has within Physics space.
 	 * @return The collision object.
 	 */
-	public RigidBody getBody() {
+	public btRigidBody getBody() {
 		return body;
 	}
 
@@ -588,7 +597,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		}
 	}
 
-	private final class SpoutMotionState extends DefaultMotionState {
+	private final class SpoutMotionState extends btDefaultMotionState {
 		private final SpoutSceneComponent scene;
 
 		public SpoutMotionState(Entity entity) {
@@ -603,8 +612,8 @@ public class SpoutSceneComponent extends SceneComponent {
 		 * @return
 		 */
 		@Override
-		public com.bulletphysics.linearmath.Transform getWorldTransform(com.bulletphysics.linearmath.Transform out) {
-			final com.bulletphysics.linearmath.Transform physicsTransform = GenericMath.toPhysicsTransform(scene.getTransformLive());
+		public btTransform getWorldTransform(btTransform out) {
+			final btTransform physicsTransform = GenericMath.toPhysicsTransform(scene.getTransformLive());
 			out.set(physicsTransform);
 			return out;
 		}
@@ -614,7 +623,7 @@ public class SpoutSceneComponent extends SceneComponent {
 		 * @param in An interpolated Physics Transform, to be used by SpoutRenderer.
 		 */
 		@Override
-		public void setWorldTransform(com.bulletphysics.linearmath.Transform in) {
+		public void setWorldTransform(btTransform in) {
 			/*
 				This is only to send the helper function the world and current scale of the entity in the scene.
 				Physics completely ignores scale and has no concept of a SpoutWorld so we must "help the helper".
@@ -637,7 +646,7 @@ public class SpoutSceneComponent extends SceneComponent {
 				Thankfully Bullet provides a non-interpolated "live" (after physics ticked) transform available via getWorldTransform. We
 				will simply set live to that.
 			 */
-			final com.bulletphysics.linearmath.Transform physicsContainer = new com.bulletphysics.linearmath.Transform();
+			final btTransform physicsContainer = new btTransform();
 			scene.getBody().getWorldTransform(physicsContainer);
 			scene.getTransformLive().set(GenericMath.toSceneTransform(liveContainer, physicsContainer));
 		}

@@ -28,10 +28,7 @@ package org.spout.engine.world.collision;
 
 import org.spout.api.geo.cuboid.Region;
 
-import com.bulletphysics.collision.shapes.voxel.VoxelPhysicsWorld;
-import com.bulletphysics.collision.shapes.voxel.VoxelWorldShape;
-
-public final class RegionShape extends VoxelWorldShape{
+public final class RegionShape extends VoxelWorldShape {
 	private final Region region;
 	public RegionShape(VoxelPhysicsWorld world, Region region) {
 		super(world);

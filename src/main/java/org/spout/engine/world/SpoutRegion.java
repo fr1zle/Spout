@@ -48,10 +48,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
-import javax.vecmath.Matrix3f;
-import javax.vecmath.Matrix4f;
-import javax.vecmath.Vector3f;
-
 import org.spout.api.Platform;
 import org.spout.api.Spout;
 import org.spout.api.component.Component;
@@ -122,24 +118,26 @@ import org.spout.engine.world.collision.SpoutPhysicsWorld;
 import org.spout.engine.world.dynamic.DynamicBlockUpdate;
 import org.spout.engine.world.dynamic.DynamicBlockUpdateTree;
 
-import com.bulletphysics.collision.broadphase.BroadphaseInterface;
-import com.bulletphysics.collision.broadphase.DbvtBroadphase;
-import com.bulletphysics.collision.broadphase.Dispatcher;
-import com.bulletphysics.collision.dispatch.CollisionConfiguration;
-import com.bulletphysics.collision.dispatch.CollisionDispatcher;
-import com.bulletphysics.collision.dispatch.CollisionFlags;
-import com.bulletphysics.collision.dispatch.CollisionObject;
-import com.bulletphysics.collision.dispatch.DefaultCollisionConfiguration;
-import com.bulletphysics.collision.dispatch.GhostPairCallback;
-import com.bulletphysics.collision.narrowphase.ManifoldPoint;
-import com.bulletphysics.collision.narrowphase.PersistentManifold;
-import com.bulletphysics.collision.shapes.voxel.VoxelWorldShape;
-import com.bulletphysics.dynamics.DiscreteDynamicsWorld;
-import com.bulletphysics.dynamics.RigidBody;
-import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
-import com.bulletphysics.dynamics.constraintsolver.SequentialImpulseConstraintSolver;
-import com.bulletphysics.linearmath.DefaultMotionState;
-import com.bulletphysics.linearmath.Transform;
+import com.badlogic.gdx.math.Matrix3;
+import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.physics.bullet.btBroadphaseInterface;
+import com.badlogic.gdx.physics.bullet.btCollisionConfiguration;
+import com.badlogic.gdx.physics.bullet.btCollisionDispatcher;
+import com.badlogic.gdx.physics.bullet.btCollisionObject;
+import com.badlogic.gdx.physics.bullet.btCollisionObject.CollisionFlags;
+import com.badlogic.gdx.physics.bullet.btDbvtBroadphase;
+import com.badlogic.gdx.physics.bullet.btDefaultCollisionConfiguration;
+import com.badlogic.gdx.physics.bullet.btDefaultMotionState;
+import com.badlogic.gdx.physics.bullet.btDiscreteDynamicsWorld;
+import com.badlogic.gdx.physics.bullet.btDispatcher;
+import com.badlogic.gdx.physics.bullet.btGhostPairCallback;
+import com.badlogic.gdx.physics.bullet.btManifoldPoint;
+import com.badlogic.gdx.physics.bullet.btPersistentManifold;
+import com.badlogic.gdx.physics.bullet.btRigidBody;
+import com.badlogic.gdx.physics.bullet.btRigidBodyConstructionInfo;
+import com.badlogic.gdx.physics.bullet.btSequentialImpulseConstraintSolver;
+import com.badlogic.gdx.physics.bullet.btVector3;
+
 import org.spout.api.math.GenericMath;
 import org.spout.api.math.VectorMath;
 
@@ -218,11 +216,11 @@ public class SpoutRegion extends Region implements AsyncManager {
 
 	//Physics
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-	private final DiscreteDynamicsWorld simulation;
-	private final CollisionDispatcher dispatcher;
-	private final BroadphaseInterface broadphase;
-	private final CollisionConfiguration configuration;
-	private final SequentialImpulseConstraintSolver solver;
+	private final btDiscreteDynamicsWorld simulation;
+	private final btCollisionDispatcher dispatcher;
+	private final btBroadphaseInterface broadphase;
+	private final btCollisionConfiguration configuration;
+	private final btSequentialImpulseConstraintSolver solver;
 
 	@SuppressWarnings("unchecked")
 	public SpoutRegion(SpoutWorld world, float x, float y, float z, RegionSource source) {
@@ -280,27 +278,28 @@ public class SpoutRegion extends Region implements AsyncManager {
 		scheduler.addAsyncManager(this);
 
 		//Physics
-		broadphase = new DbvtBroadphase();
-		broadphase.getOverlappingPairCache().setInternalGhostPairCallback(new GhostPairCallback());
-		configuration = new DefaultCollisionConfiguration();
-		dispatcher = new CollisionDispatcher(configuration);
-		solver = new SequentialImpulseConstraintSolver();
-		simulation = new DiscreteDynamicsWorld(dispatcher, broadphase, solver, configuration);
-		simulation.setGravity(new Vector3f(0, -9.81F, 0));
-		simulation.getSolverInfo().splitImpulse = true;
+		broadphase = new btDbvtBroadphase();
+		broadphase.getOverlappingPairCache().setInternalGhostPairCallback(new btGhostPairCallback());
+		configuration = new btDefaultCollisionConfiguration();
+		dispatcher = new btCollisionDispatcher(configuration);
+		solver = new btSequentialImpulseConstraintSolver();
+		simulation = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, configuration);
+		simulation.setGravity(new com.badlogic.gdx.math.Vector3(0, -9.81F, 0));
+//		simulation.getSolverInfo().splitImpulse = true;
+		simulation.getSolverInfo().setM_splitImpulse(1); // Is 1 true? Who knows!?
 		final SpoutPhysicsWorld physicsInfo = new SpoutPhysicsWorld(this);
 		final VoxelWorldShape simulationShape = new RegionShape(physicsInfo, this);
-		final Matrix3f rot = new Matrix3f();
+		final Matrix3 rot = new Matrix3();
 		rot.setIdentity();
-		final DefaultMotionState regionMotionState = new DefaultMotionState(new Transform(new Matrix4f(rot, new Vector3f(0, 0, 0), 1.0f)));
-		final RigidBodyConstructionInfo regionBodyInfo = new RigidBodyConstructionInfo(0, regionMotionState, simulationShape, new Vector3f(0f, 0f, 0f));
-		final RigidBody regionBody = new RigidBody(regionBodyInfo);
+		final btDefaultMotionState regionMotionState = new btDefaultMotionState(new Matrix4(rot, new com.badlogic.gdx.math.Vector3(0, 0, 0), 1.0f));
+		final btRigidBodyConstructionInfo regionBodyInfo = new btRigidBodyConstructionInfo(0, regionMotionState, simulationShape, new com.badlogic.gdx.math.Vector3(0f, 0f, 0f));
+		final btRigidBody regionBody = new btRigidBody(regionBodyInfo);
 		//TODO Recheck Terasology code for more correct flags
-		regionBody.setCollisionFlags(CollisionFlags.STATIC_OBJECT | regionBody.getCollisionFlags());
+		regionBody.setCollisionFlags(CollisionFlags.CF_STATIC_OBJECT | regionBody.getCollisionFlags());
 		simulation.addRigidBody(regionBody);
 	}
 
-	public DiscreteDynamicsWorld getSimulation() {
+	public btDiscreteDynamicsWorld getSimulation() {
 		return simulation;
 	}
 
@@ -948,31 +947,31 @@ public class SpoutRegion extends Region implements AsyncManager {
 			lock.writeLock().lock();
 			//Simulate physics
 			simulation.stepSimulation(dt, 2);
-			final Dispatcher dispatcher = simulation.getDispatcher();
+			final btDispatcher dispatcher = simulation.getDispatcher();
 			int manifolds = dispatcher.getNumManifolds();
 			for (int i = 0; i < manifolds; i++) {
-				PersistentManifold contact = dispatcher.getManifoldByIndexInternal(i);
+				btPersistentManifold contact = dispatcher.getManifoldByIndexInternal(i);
 				Object colliderRawA = contact.getBody0();
 				Object colliderRawB = contact.getBody1();
-				if (!(colliderRawA instanceof CollisionObject) || !(colliderRawB instanceof CollisionObject)) {
+				if (!(colliderRawA instanceof btCollisionObject) || !(colliderRawB instanceof btCollisionObject)) {
 					continue;
 				}
-				Object holderA = ((CollisionObject) colliderRawA).getUserPointer();
-				Object holderB = ((CollisionObject) colliderRawB).getUserPointer();
+				Object holderA = ((btCollisionObject) colliderRawA).getUserPointer();
+				Object holderB = ((btCollisionObject) colliderRawB).getUserPointer();
 				int contacts = contact.getNumContacts();
 
 				//Loop through the contact points
 				for (int j = 0; j < contacts; j++) {
 					//Grab a contact point
-					final ManifoldPoint bulletPoint = contact.getContactPoint(j);
+					final btManifoldPoint bulletPoint = contact.getContactPoint(j);
 					//Contact point is no longer valid as negative values = still within contact so lets not resolve that to the API
 					if (bulletPoint.getDistance() > 0f) {
 						continue;
 					}
 					//3D position where colliderA contacted colliderB
-					Point contactPointA = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnA(new Vector3f())), getWorld());
+					Point contactPointA = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnA()), getWorld());
 					//3D position where colliderB contacted colliderA
-					Point contactPointB = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnB(new Vector3f())), getWorld());
+					Point contactPointB = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnB()), getWorld());
 
 					//Resolve Entity -> Entity Collisions
 					if (holderA instanceof Entity) {
@@ -1877,9 +1876,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 
 	public Vector3 getGravity() {
 		synchronized(simulation) {
-			Vector3f vector = new Vector3f();
-			vector = simulation.getGravity(vector);
-			return VectorMath.toVector3(vector);
+			return VectorMath.toVector3(simulation.getGravity());
 		}
 	}
 

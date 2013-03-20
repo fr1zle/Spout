@@ -26,12 +26,6 @@
  */
 package org.spout.engine.world.collision;
 
-import javax.vecmath.Vector3f;
-
-import com.bulletphysics.collision.shapes.CollisionShape;
-import com.bulletphysics.collision.shapes.voxel.CollisionSnapshot;
-import com.bulletphysics.collision.shapes.voxel.VoxelPhysicsWorld;
-
 import org.spout.api.collision.CollisionStrategy;
 import org.spout.api.geo.cuboid.Region;
 import org.spout.api.material.BlockMaterial;
@@ -39,6 +33,8 @@ import org.spout.api.math.Vector3;
 
 import org.spout.engine.world.SpoutBlock;
 import org.spout.engine.world.SpoutRegion;
+
+import com.badlogic.gdx.physics.bullet.btCollisionShape;
 
 public class SpoutPhysicsWorld implements VoxelPhysicsWorld {
 	private final SpoutRegion simulation;
@@ -58,7 +54,7 @@ public class SpoutPhysicsWorld implements VoxelPhysicsWorld {
 
 	private static class SpoutVoxelCollisionSnapshot implements CollisionSnapshot {
 		private final boolean isColliding, isBlocking;
-		private final CollisionShape shape;
+		private final btCollisionShape shape;
 		private final Vector3 position;
 		private final Region region;
 
@@ -81,14 +77,14 @@ public class SpoutPhysicsWorld implements VoxelPhysicsWorld {
 		}
 
 		@Override
-		public CollisionShape getCollisionShape() {
+		public btCollisionShape getCollisionShape() {
 			return shape;
 		}
 
 		@Override
-		public Vector3f getCollisionOffset() {
+		public com.badlogic.gdx.math.Vector3 getCollisionOffset() {
 			//This is the offset of the material shape from the center of the voxel (for a cube of 1, 1, 1 in size, this should be 0, 0, 0)
-			return new Vector3f(0, 0, 0);
+			return new com.badlogic.gdx.math.Vector3(0, 0, 0);
 		}
 
 		@Override
