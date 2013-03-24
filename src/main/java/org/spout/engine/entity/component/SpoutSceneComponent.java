@@ -37,10 +37,13 @@ import org.spout.api.geo.discrete.Point;
 import org.spout.api.geo.discrete.Transform;
 import org.spout.api.math.GenericMath;
 import org.spout.api.math.Quaternion;
+import org.spout.api.math.QuaternionMath;
 import org.spout.api.math.Vector3;
 import org.spout.api.math.VectorMath;
 import org.spout.engine.world.SpoutRegion;
 
+import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.physics.bullet.btCollisionDispatcher;
 import com.badlogic.gdx.physics.bullet.btCollisionObject.CollisionFlags;
 import com.badlogic.gdx.physics.bullet.btCollisionObject;
@@ -64,6 +67,7 @@ public class SpoutSceneComponent extends SceneComponent {
 	private final Transform snapshot = new Transform();
 	private final Transform live = new Transform();
 	private final AtomicReference<SpoutRegion> simulationRegion = new AtomicReference<SpoutRegion>(null);
+	private final Matrix4 PHYSICS_MATRIX = new Matrix4();
 	private btRigidBody body;
 
 	//Client/Rendering
@@ -310,9 +314,10 @@ public class SpoutSceneComponent extends SceneComponent {
 		final com.badlogic.gdx.math.Vector3 inertia = new com.badlogic.gdx.math.Vector3();
 		shape.calculateLocalInertia(mass, inertia);
 		//Construct body blueprint
-		final btRigidBodyConstructionInfo blueprint = new btRigidBodyConstructionInfo(mass, new SpoutMotionState(getOwner()), shape, inertia);
+		PHYSICS_MATRIX.setTranslation(VectorMath.toVector3f(live.getPosition()));
+		PHYSICS_MATRIX.set(QuaternionMath.toQuaternionf(live.getRotation()));
+		final btRigidBodyConstructionInfo blueprint = new btRigidBodyConstructionInfo(mass, new SpoutMotionState(getOwner(), PHYSICS_MATRIX), shape, inertia);
 		body = new btRigidBody(blueprint);
-		body.setUserPointer(getOwner());
 		body.activate();
 		final SpoutRegion region = simulationRegion.get();
 		if (region != null) {
@@ -525,7 +530,7 @@ public class SpoutSceneComponent extends SceneComponent {
 
 	/**
 	 * Interpolates the render transform for Spout rendering. This only kicks in when the entity has no body.
-	 * @param dt time since last interpolation.
+	 * @param dtp time since last interpolation.
 	 */
 	public void interpolateRender(float dtp) {
 		
@@ -590,7 +595,9 @@ public class SpoutSceneComponent extends SceneComponent {
 		validateBody(region);
 		try {
 			region.getPhysicsLock().writeLock().lock();
-			body.setWorldTransform(GenericMath.toPhysicsTransform(live));
+			PHYSICS_MATRIX.setTranslation(VectorMath.toVector3f(live.getPosition()));
+			PHYSICS_MATRIX.set(QuaternionMath.toQuaternionf(live.getRotation()));
+			body.setWorldTransform(PHYSICS_MATRIX);
 			body.clearForces(); //TODO May not be correct here, needs testing.
 		} finally {
 			region.getPhysicsLock().writeLock().unlock();
@@ -600,55 +607,28 @@ public class SpoutSceneComponent extends SceneComponent {
 	private final class SpoutMotionState extends btDefaultMotionState {
 		private final SpoutSceneComponent scene;
 
-		public SpoutMotionState(Entity entity) {
-			super(GenericMath.toPhysicsTransform(((SpoutSceneComponent) entity.getScene()).getTransformLive()));
+		public SpoutMotionState(Entity entity, Matrix4 startingTransform) {
+			super(startingTransform);
 			this.scene = (SpoutSceneComponent) entity.getScene();
 		}
 
-		/**
-		 * Called pre-physics tick by TeraBullet. This is used to figure out where in Scene space our object is then perform
-		 * physics and figure out where the object would be in Physics space.
-		 * @param out
-		 * @return
-		 */
 		@Override
-		public btTransform getWorldTransform(btTransform out) {
-			final btTransform physicsTransform = GenericMath.toPhysicsTransform(scene.getTransformLive());
-			out.set(physicsTransform);
-			return out;
+		public void setWorldTransform (final Matrix4 worldTrans) {
+			final com.badlogic.gdx.math.Vector3 physicsPosition = new com.badlogic.gdx.math.Vector3();
+			final com.badlogic.gdx.math.Quaternion physicsRotation = new com.badlogic.gdx.math.Quaternion();
+			worldTrans.getTranslation(physicsPosition);
+			worldTrans.getRotation(physicsRotation);
+			final Transform live = scene.getTransformLive();
+			live.setPosition(new Point(VectorMath.toVector3(physicsPosition), live.getPosition().getWorld()));
+			live.setRotation(QuaternionMath.toQuaternion(physicsRotation));
 		}
 
-		/**
-		 * Called post-physics tick by TeraBullet. This is used to update Scene space with transforms calculated from Physics space.
-		 * @param in An interpolated Physics Transform, to be used by SpoutRenderer.
-		 */
 		@Override
-		public void setWorldTransform(btTransform in) {
-			/*
-				This is only to send the helper function the world and current scale of the entity in the scene.
-				Physics completely ignores scale and has no concept of a SpoutWorld so we must "help the helper".
-			 */
-			final Transform liveContainer = new Transform(); //TODO Possibly pass the helper World and Scale to bypass the need for a transform.
-			liveContainer.setPosition(scene.getTransformLive().getPosition());
-			liveContainer.setScale(scene.getTransformLive().getScale());
-			/*
-				Now we can set render and live
-
-				The Transform passed into this method has been interpolated, ready for graphics. We don't set it to the live
-				as live needs to be the transform from the last physics tick. We will handle this momentarily.
-			 */
-			scene.getRenderTransform().set(GenericMath.toSceneTransform(liveContainer, in));
-			/*
-				Now we will set the Scene's live transform to that of the Physics' transform.
-
-				As said above, the transform passed in is interpolated and as such is not suitable for live. When setWorldTransform is called,
-				the physics has already ticked (for this game tick) and then interpolation occurs based on the timestep of the simulation.
-				Thankfully Bullet provides a non-interpolated "live" (after physics ticked) transform available via getWorldTransform. We
-				will simply set live to that.
-			 */
-			final btTransform physicsContainer = new btTransform();
-			scene.getBody().getWorldTransform(physicsContainer);
-			scene.getTransformLive().set(GenericMath.toSceneTransform(liveContainer, physicsContainer));
+		public void getWorldTransform(final Matrix4 worldTrans) {
+			final Transform live = scene.getTransformLive();
+			PHYSICS_MATRIX.setTranslation(VectorMath.toVector3f(live.getPosition()));
+			PHYSICS_MATRIX.set(QuaternionMath.toQuaternionf(live.getRotation()));
+			worldTrans.set(PHYSICS_MATRIX);
 		}
 	}
 }

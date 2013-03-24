@@ -50,9 +50,7 @@ import java.util.logging.Level;
 
 import org.spout.api.Platform;
 import org.spout.api.Spout;
-import org.spout.api.component.Component;
 import org.spout.api.component.type.BlockComponent;
-import org.spout.api.component.type.EntityComponent;
 import org.spout.api.datatable.ManagedHashMap;
 import org.spout.api.entity.Entity;
 import org.spout.api.entity.Player;
@@ -113,30 +111,23 @@ import org.spout.engine.scheduler.SpoutScheduler;
 import org.spout.engine.scheduler.SpoutTaskManager;
 import org.spout.engine.util.thread.AsyncManager;
 import org.spout.engine.util.thread.snapshotable.SnapshotManager;
-import org.spout.engine.world.collision.RegionShape;
-import org.spout.engine.world.collision.SpoutPhysicsWorld;
 import org.spout.engine.world.dynamic.DynamicBlockUpdate;
 import org.spout.engine.world.dynamic.DynamicBlockUpdateTree;
 
-import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.physics.bullet.btBroadphaseInterface;
 import com.badlogic.gdx.physics.bullet.btCollisionConfiguration;
 import com.badlogic.gdx.physics.bullet.btCollisionDispatcher;
-import com.badlogic.gdx.physics.bullet.btCollisionObject;
 import com.badlogic.gdx.physics.bullet.btCollisionObject.CollisionFlags;
+import com.badlogic.gdx.physics.bullet.btCompoundShape;
 import com.badlogic.gdx.physics.bullet.btDbvtBroadphase;
 import com.badlogic.gdx.physics.bullet.btDefaultCollisionConfiguration;
 import com.badlogic.gdx.physics.bullet.btDefaultMotionState;
 import com.badlogic.gdx.physics.bullet.btDiscreteDynamicsWorld;
-import com.badlogic.gdx.physics.bullet.btDispatcher;
 import com.badlogic.gdx.physics.bullet.btGhostPairCallback;
-import com.badlogic.gdx.physics.bullet.btManifoldPoint;
-import com.badlogic.gdx.physics.bullet.btPersistentManifold;
 import com.badlogic.gdx.physics.bullet.btRigidBody;
 import com.badlogic.gdx.physics.bullet.btRigidBodyConstructionInfo;
 import com.badlogic.gdx.physics.bullet.btSequentialImpulseConstraintSolver;
-import com.badlogic.gdx.physics.bullet.btVector3;
 
 import org.spout.api.math.GenericMath;
 import org.spout.api.math.VectorMath;
@@ -148,7 +139,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 	private final RegionSetQueueElement saveMarkedElement = new RegionSetQueueElement(saveMarkedQueue, this);
 	
 	private Thread executionThread;
-	
+
 	@SuppressWarnings("unchecked")
 	public AtomicReference<SpoutChunk>[][][] chunks = new AtomicReference[CHUNKS.SIZE][CHUNKS.SIZE][CHUNKS.SIZE];
 	/**
@@ -179,7 +170,6 @@ public class SpoutRegion extends Region implements AsyncManager {
 	private final Queue<SpoutChunkSnapshotFuture> snapshotQueue = new ConcurrentLinkedQueue<SpoutChunkSnapshotFuture>();
 	
 	protected SetQueue<SpoutChunk> unloadQueue = new SetQueue<SpoutChunk>(CHUNKS.VOLUME);
-	public static final byte POPULATE_CHUNK_MARGIN = 1;
 	/**
 	 * The sequence number for executing inter-region physics and dynamic updates
 	 */
@@ -232,7 +222,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 		int zz = GenericMath.mod(getZ(), 3);
 		updateSequence = (xx * 9) + (yy * 3) + zz;
 
-		if (Spout.getPlatform() == Platform.CLIENT) {
+		if (world.getEngine().getPlatform() == Platform.CLIENT) {
 			meshThread = new ArrayList<Thread>();
 			for(int i = 0; i < 1; i++ ){//TODO : Make a option to choice the number of thread to make mesh
 				meshThread.add(new MeshGeneratorThread());
@@ -285,18 +275,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 		solver = new btSequentialImpulseConstraintSolver();
 		simulation = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, configuration);
 		simulation.setGravity(new com.badlogic.gdx.math.Vector3(0, -9.81F, 0));
-//		simulation.getSolverInfo().splitImpulse = true;
-		simulation.getSolverInfo().setM_splitImpulse(1); // Is 1 true? Who knows!?
-		final SpoutPhysicsWorld physicsInfo = new SpoutPhysicsWorld(this);
-		final VoxelWorldShape simulationShape = new RegionShape(physicsInfo, this);
-		final Matrix3 rot = new Matrix3();
-		rot.setIdentity();
-		final btDefaultMotionState regionMotionState = new btDefaultMotionState(new Matrix4(rot, new com.badlogic.gdx.math.Vector3(0, 0, 0), 1.0f));
-		final btRigidBodyConstructionInfo regionBodyInfo = new btRigidBodyConstructionInfo(0, regionMotionState, simulationShape, new com.badlogic.gdx.math.Vector3(0f, 0f, 0f));
-		final btRigidBody regionBody = new btRigidBody(regionBodyInfo);
-		//TODO Recheck Terasology code for more correct flags
-		regionBody.setCollisionFlags(CollisionFlags.CF_STATIC_OBJECT | regionBody.getCollisionFlags());
-		simulation.addRigidBody(regionBody);
+		simulation.getSolverInfo().setM_splitImpulse(1); //True
 	}
 
 	public btDiscreteDynamicsWorld getSimulation() {
@@ -947,90 +926,9 @@ public class SpoutRegion extends Region implements AsyncManager {
 			lock.writeLock().lock();
 			//Simulate physics
 			simulation.stepSimulation(dt, 2);
-			final btDispatcher dispatcher = simulation.getDispatcher();
-			int manifolds = dispatcher.getNumManifolds();
-			for (int i = 0; i < manifolds; i++) {
-				btPersistentManifold contact = dispatcher.getManifoldByIndexInternal(i);
-				Object colliderRawA = contact.getBody0();
-				Object colliderRawB = contact.getBody1();
-				if (!(colliderRawA instanceof btCollisionObject) || !(colliderRawB instanceof btCollisionObject)) {
-					continue;
-				}
-				Object holderA = ((btCollisionObject) colliderRawA).getUserPointer();
-				Object holderB = ((btCollisionObject) colliderRawB).getUserPointer();
-				int contacts = contact.getNumContacts();
-
-				//Loop through the contact points
-				for (int j = 0; j < contacts; j++) {
-					//Grab a contact point
-					final btManifoldPoint bulletPoint = contact.getContactPoint(j);
-					//Contact point is no longer valid as negative values = still within contact so lets not resolve that to the API
-					if (bulletPoint.getDistance() > 0f) {
-						continue;
-					}
-					//3D position where colliderA contacted colliderB
-					Point contactPointA = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnA()), getWorld());
-					//3D position where colliderB contacted colliderA
-					Point contactPointB = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnB()), getWorld());
-
-					//Resolve Entity -> Entity Collisions
-					if (holderA instanceof Entity) {
-						//Entity was removed before the contact point could be resolved, break
-						if (((Entity) holderA).isRemoved()) {
-							break;
-						}
-						//HolderA: Entity
-						//HolderB: Entity
-						if (holderB instanceof Entity) {
-							//Entity was removed before the contact point could be resolved, break
-							if (((Entity) holderB).isRemoved()) {
-								break;
-							}
-							//Call onCollide for colliderA's EntityComponents
-							for (Component component : ((Entity) holderA).values()) {
-								if (component instanceof EntityComponent) {
-									((EntityComponent) component).onCollided(contactPointA, contactPointB, (Entity) holderB);
-								}
-							}
-							//Call onCollide for colliderB's EntityComponents
-							for (Component component : ((Entity) holderB).values()) {
-								if (component instanceof EntityComponent) {
-									((EntityComponent) component).onCollided(contactPointB, contactPointA, (Entity) holderA);
-								}
-							}
-						//HolderA: Entity
-						//HolderB: Block
-						} else if (holderB instanceof Block) {
-							//Call onCollide for colliderA's EntityComponents
-							for (Component component : ((Entity) holderA).values()) {
-								if (component instanceof EntityComponent) {
-									((EntityComponent) component).onCollided(contactPointA, contactPointB, (Block) holderB);
-								}
-							}
-							((Block) holderB).getMaterial().onCollided(contactPointB, contactPointA, (Entity) holderA);
-						}
-					//HolderA: Block
-					//HolderB: Entity
-					} else if (holderA instanceof Block) {
-						if (holderB instanceof Entity) {
-							//Entity was removed before the contact point could be resolved, break
-							if (((Entity) holderB).isRemoved()) {
-								break;
-							}
-							((Block) holderA).getMaterial().onCollided(contactPointA, contactPointB, (Entity) holderB);
-							//Call onCollide for colliderB's EntityComponents
-							for (Component component : ((Entity) holderB).values()) {
-								if (component instanceof EntityComponent) {
-									((EntityComponent) component).onCollided(contactPointB, contactPointA, (Block) holderA);
-								}
-							}
-						}
-					}
-				}
-			}
 		} catch (Exception e) {
 			synchronized(logLock) {
-				Spout.getLogger().log(Level.SEVERE, "Exception while executing physics in region " + getBase().toBlockString(), e);
+				Spout.severe("Exception while executing physics in region " + getBase().toBlockString(), e);
 			}
 		} finally {
 			lock.writeLock().unlock();

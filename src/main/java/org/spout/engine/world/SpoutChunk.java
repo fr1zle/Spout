@@ -76,6 +76,8 @@ import org.spout.api.geo.cuboid.ContainerFillOrder;
 import org.spout.api.geo.cuboid.Cube;
 import org.spout.api.geo.cuboid.LightContainer;
 import org.spout.api.geo.cuboid.Region;
+import org.spout.api.geo.discrete.Point;
+import org.spout.api.geo.discrete.Transform;
 import org.spout.api.lighting.LightingManager;
 import org.spout.api.lighting.LightingRegistry;
 import org.spout.api.lighting.Modifiable;
@@ -88,6 +90,7 @@ import org.spout.api.material.block.BlockFullState;
 import org.spout.api.material.block.BlockSnapshot;
 import org.spout.api.material.range.EffectRange;
 import org.spout.api.math.GenericMath;
+import org.spout.api.math.Quaternion;
 import org.spout.api.math.Vector3;
 import org.spout.api.scheduler.TickStage;
 import org.spout.api.util.cuboid.CuboidBlockMaterialBuffer;
@@ -108,6 +111,10 @@ import org.spout.engine.util.thread.snapshotable.Snapshotable;
 import org.spout.engine.world.physics.PhysicsQueue;
 import org.spout.engine.world.physics.UpdateQueue;
 
+import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.physics.bullet.btCollisionShape;
+import com.badlogic.gdx.physics.bullet.btCompoundShape;
+import com.badlogic.gdx.physics.bullet.btRigidBody;
 import com.google.common.collect.Sets;
 
 public class SpoutChunk extends Chunk implements Snapshotable, Modifiable {
@@ -425,7 +432,7 @@ public class SpoutChunk extends Chunk implements Snapshotable, Modifiable {
 			oldState = getAndSetBlockLocked(bx, by, bz, newId, newData);
 			oldMaterial = (BlockMaterial) MaterialRegistry.get(oldState);
 		} else {
-			boolean success = false;
+			boolean success;
 			do {
 				oldState = blockStore.getFullData(bx, by, bz);
 				oldMaterial = (BlockMaterial) MaterialRegistry.get(oldState);
@@ -2245,7 +2252,6 @@ public class SpoutChunk extends Chunk implements Snapshotable, Modifiable {
 				this.setBlockLight(x, y, z, newMaterial.getLightLevel(newData), cause);
 			}
 		}
-
 		setModified();
 	}
 
