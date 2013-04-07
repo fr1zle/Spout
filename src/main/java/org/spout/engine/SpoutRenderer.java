@@ -210,9 +210,7 @@ public class SpoutRenderer {
 		//Interpolate entity transform if Physics is not currently applied to the entity
 		for (Entity e : client.getActiveWorld().getAll()) {
 			final SpoutSceneComponent scene = (SpoutSceneComponent) e.getScene();
-			if (scene.getBody() == null) {
-				scene.interpolateRender(dt);
-			}
+			scene.interpolateRender(dt);
 		}
 
 		//Pull input each frame

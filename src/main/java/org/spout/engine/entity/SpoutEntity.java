@@ -368,7 +368,6 @@ public class SpoutEntity extends BaseComponentHolder implements Entity, Snapshot
 	public void setupInitialChunk(Transform transform) {
 		SpoutRegion region = (SpoutRegion) scene.getTransformLive().getPosition().getChunk(LoadOption.LOAD_GEN).getRegion();
 		entityManager.set(region.getEntityManager());
-		scene.simulate(region);
 
 		snapshotManager.copyAllSnapshots();
 

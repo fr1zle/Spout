@@ -45,18 +45,12 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
-
-import javax.vecmath.Matrix3f;
-import javax.vecmath.Matrix4f;
-import javax.vecmath.Vector3f;
 
 import org.spout.api.Platform;
 import org.spout.api.Spout;
-import org.spout.api.component.Component;
+import org.spout.api.collision.BoundingBox;
 import org.spout.api.component.type.BlockComponent;
-import org.spout.api.component.type.EntityComponent;
 import org.spout.api.datatable.ManagedHashMap;
 import org.spout.api.entity.Entity;
 import org.spout.api.entity.Player;
@@ -67,6 +61,7 @@ import org.spout.api.event.chunk.ChunkUnloadEvent;
 import org.spout.api.event.chunk.ChunkUpdatedEvent;
 import org.spout.api.generator.biome.Biome;
 import org.spout.api.generator.biome.BiomeManager;
+import org.spout.api.geo.AreaChunkAccess;
 import org.spout.api.geo.LoadOption;
 import org.spout.api.geo.World;
 import org.spout.api.geo.cuboid.Block;
@@ -87,7 +82,6 @@ import org.spout.api.material.block.BlockFace;
 import org.spout.api.material.range.EffectRange;
 import org.spout.api.math.GenericMath;
 import org.spout.api.math.Vector3;
-import org.spout.api.math.VectorMath;
 import org.spout.api.protocol.NetworkSynchronizer;
 import org.spout.api.render.RenderMaterial;
 import org.spout.api.scheduler.TaskManager;
@@ -113,6 +107,7 @@ import org.spout.engine.SpoutConfiguration;
 import org.spout.engine.entity.EntityManager;
 import org.spout.engine.entity.SpoutEntity;
 import org.spout.engine.entity.SpoutPlayer;
+import org.spout.engine.entity.component.SpoutSceneComponent;
 import org.spout.engine.filesystem.ChunkDataForRegion;
 import org.spout.engine.filesystem.versioned.ChunkFiles;
 import org.spout.engine.mesh.ChunkMesh;
@@ -121,30 +116,9 @@ import org.spout.engine.scheduler.SpoutScheduler;
 import org.spout.engine.scheduler.SpoutTaskManager;
 import org.spout.engine.util.thread.AsyncManager;
 import org.spout.engine.util.thread.snapshotable.SnapshotManager;
-import org.spout.engine.world.collision.RegionShape;
-import org.spout.engine.world.collision.SpoutPhysicsWorld;
 import org.spout.engine.world.dynamic.DynamicBlockUpdate;
 import org.spout.engine.world.dynamic.DynamicBlockUpdateTree;
 import org.spout.engine.world.light.ServerLightStore;
-
-import com.bulletphysics.collision.broadphase.BroadphaseInterface;
-import com.bulletphysics.collision.broadphase.DbvtBroadphase;
-import com.bulletphysics.collision.broadphase.Dispatcher;
-import com.bulletphysics.collision.dispatch.CollisionConfiguration;
-import com.bulletphysics.collision.dispatch.CollisionDispatcher;
-import com.bulletphysics.collision.dispatch.CollisionFlags;
-import com.bulletphysics.collision.dispatch.CollisionObject;
-import com.bulletphysics.collision.dispatch.DefaultCollisionConfiguration;
-import com.bulletphysics.collision.dispatch.GhostPairCallback;
-import com.bulletphysics.collision.narrowphase.ManifoldPoint;
-import com.bulletphysics.collision.narrowphase.PersistentManifold;
-import com.bulletphysics.collision.shapes.voxel.VoxelWorldShape;
-import com.bulletphysics.dynamics.DiscreteDynamicsWorld;
-import com.bulletphysics.dynamics.RigidBody;
-import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
-import com.bulletphysics.dynamics.constraintsolver.SequentialImpulseConstraintSolver;
-import com.bulletphysics.linearmath.DefaultMotionState;
-import com.bulletphysics.linearmath.Transform;
 
 public class SpoutRegion extends Region implements AsyncManager {
 	private AtomicInteger numberActiveChunks = new AtomicInteger();
@@ -219,14 +193,6 @@ public class SpoutRegion extends Region implements AsyncManager {
 
 	private final AtomicReference<SpoutRegion>[][][] neighbours;
 
-	//Physics
-	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-	private final DiscreteDynamicsWorld simulation;
-	private final CollisionDispatcher dispatcher;
-	private final BroadphaseInterface broadphase;
-	private final CollisionConfiguration configuration;
-	private final SequentialImpulseConstraintSolver solver;
-
 	@SuppressWarnings("unchecked")
 	public SpoutRegion(SpoutWorld world, float x, float y, float z, RegionSource source) {
 		super(world, x * Region.BLOCKS.SIZE, y * Region.BLOCKS.SIZE, z * Region.BLOCKS.SIZE);
@@ -281,34 +247,6 @@ public class SpoutRegion extends Region implements AsyncManager {
 		scheduler = (SpoutScheduler) (Spout.getEngine().getScheduler());
 		
 		scheduler.addAsyncManager(this);
-
-		//Physics
-		broadphase = new DbvtBroadphase();
-		broadphase.getOverlappingPairCache().setInternalGhostPairCallback(new GhostPairCallback());
-		configuration = new DefaultCollisionConfiguration();
-		dispatcher = new CollisionDispatcher(configuration);
-		solver = new SequentialImpulseConstraintSolver();
-		simulation = new DiscreteDynamicsWorld(dispatcher, broadphase, solver, configuration);
-		simulation.setGravity(new Vector3f(0, -9.81F, 0));
-		simulation.getSolverInfo().splitImpulse = true;
-		final SpoutPhysicsWorld physicsInfo = new SpoutPhysicsWorld(this);
-		final VoxelWorldShape simulationShape = new RegionShape(physicsInfo, this);
-		final Matrix3f rot = new Matrix3f();
-		rot.setIdentity();
-		final DefaultMotionState regionMotionState = new DefaultMotionState(new Transform(new Matrix4f(rot, new Vector3f(0, 0, 0), 1.0f)));
-		final RigidBodyConstructionInfo regionBodyInfo = new RigidBodyConstructionInfo(0, regionMotionState, simulationShape, new Vector3f(0f, 0f, 0f));
-		final RigidBody regionBody = new RigidBody(regionBodyInfo);
-		//TODO Recheck Terasology code for more correct flags
-		regionBody.setCollisionFlags(CollisionFlags.STATIC_OBJECT | regionBody.getCollisionFlags());
-		simulation.addRigidBody(regionBody);
-	}
-
-	public DiscreteDynamicsWorld getSimulation() {
-		return simulation;
-	}
-
-	public ReentrantReadWriteLock getPhysicsLock() {
-		return lock;
 	}
 
 	public void startMeshGeneratorThread() {
@@ -938,105 +876,103 @@ public class SpoutRegion extends Region implements AsyncManager {
 		}
 	}
 
-	private static final Object logLock = new Object();
-
 	/**
-	 * Updates CollisionObjects in this region and adds/removes them from the simulation. 
+	 * Updates physics in this region
 	 * Steps simulation forward and finally alerts the API in components.
 	 * @param dt
 	 */
 	private void updateDynamics(float dt) {
-		try {
-			lock.writeLock().lock();
-			//Simulate physics
-			simulation.stepSimulation(dt, 2);
-			final Dispatcher dispatcher = simulation.getDispatcher();
-			int manifolds = dispatcher.getNumManifolds();
-			for (int i = 0; i < manifolds; i++) {
-				PersistentManifold contact = dispatcher.getManifoldByIndexInternal(i);
-				Object colliderRawA = contact.getBody0();
-				Object colliderRawB = contact.getBody1();
-				if (!(colliderRawA instanceof CollisionObject) || !(colliderRawB instanceof CollisionObject)) {
-					continue;
-				}
-				Object holderA = ((CollisionObject) colliderRawA).getUserPointer();
-				Object holderB = ((CollisionObject) colliderRawB).getUserPointer();
-				int contacts = contact.getNumContacts();
-
-				//Loop through the contact points
-				for (int j = 0; j < contacts; j++) {
-					//Grab a contact point
-					final ManifoldPoint bulletPoint = contact.getContactPoint(j);
-					//Contact point is no longer valid as negative values = still within contact so lets not resolve that to the API
-					if (bulletPoint.getDistance() > 0f) {
-						continue;
+		for (SpoutEntity entity : entityManager.getAllLive()) {
+			if (!entity.isRemoved()) {
+				SpoutSceneComponent scene = (SpoutSceneComponent) entity.getScene();
+				if (scene.isActivated()) {
+					//TODO: This is a poor linear approximation of acceleration merely to prove it works
+					//need to switch to proper numerical approximation of derivatives, e.g Runge–Kutta methods
+					final Vector3 acceleration = scene.getRawForces().divide(scene.getMass()).add(-9.81F, -9.81F, -9.81F);
+					final Vector3 prevVelocity = scene.getRawMovementVelocity();
+					
+					/* Calculate the new position*/
+					
+					//TODO: need to detect if dt is too large and will result in tunneling, 
+					// and compensate with multiple timesteps to reduce traveled distance per step
+					
+					//Eular linear approximation: s = ut + 0.5at^2
+					// s - new position
+					// u - velocity
+					// t - timestep
+					// a - acceleration
+					
+					final Vector3 movement = prevVelocity.multiply(dt).add(acceleration.multiply(dt * dt).divide(2));
+					Point newPosition = scene.getTransformLive().getPosition().add(movement);
+					final BoundingBox volume = scene.getVolume();
+					final BoundingBox worldVolume = volume.clone().offset(newPosition);
+					final int bx = newPosition.getBlockX();
+					final int by = newPosition.getBlockY();
+					final int bz = newPosition.getBlockZ();
+					final int rangeX = (int) Math.ceil(volume.getMax().getX() - volume.getMin().getX());
+					final int rangeY = (int) Math.ceil(volume.getMax().getY() - volume.getMin().getY());
+					final int rangeZ = (int) Math.ceil(volume.getMax().getZ() - volume.getMin().getZ());
+					LinkedList<BoundingBox> collidesWith = new LinkedList<BoundingBox>();
+					for (int dx = 0; dx < rangeX; dx++) {
+						for (int dy = 0; dy < rangeY; dy++) {
+							for (int dz = 0; dx < rangeZ; dz++) {
+								BlockMaterial material;
+								AreaChunkAccess source;
+								if (this.containsBlock(bx + dx, by + dy, bz + dz)) {
+									source = this;
+								} else {
+									//TODO: handle intra-regional physics separately
+									source = this.getWorld();
+								}
+								if (entity.isObserver() || source.getChunkFromBlock(bx + dx, by + dy, bz + dz, LoadOption.NO_LOAD) != null){
+									material = source.getBlockMaterial(bx + dx, by + dy, bz + dz);
+								} else {
+									//TODO: handle falling into unloaded chunks correctly
+									material = BlockMaterial.AIR;
+								}
+								if (material != BlockMaterial.AIR) {
+									//TODO give block materials proper volumes
+									BoundingBox block = new BoundingBox(newPosition, newPosition.add(Vector3.ONE));
+									if (worldVolume.intersects(block) || block.containsBoundingBox(worldVolume)) {
+										collidesWith.add(block);
+									}
+								}
+							}
+						}
 					}
-					//3D position where colliderA contacted colliderB
-					Point contactPointA = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnA(new Vector3f())), getWorld());
-					//3D position where colliderB contacted colliderA
-					Point contactPointB = new Point(VectorMath.toVector3(bulletPoint.getPositionWorldOnB(new Vector3f())), getWorld());
-
-					//Resolve Entity -> Entity Collisions
-					if (holderA instanceof Entity) {
-						//Entity was removed before the contact point could be resolved, break
-						if (((Entity) holderA).isRemoved()) {
+					//TODO: collisions with other entities
+					
+					for (BoundingBox box : collidesWith) {
+						//Offset the entity with the minimum distance needed to move out of the block
+						worldVolume.offset(worldVolume.resolveStatic(box));
+						boolean stillColliding = false;
+						for (BoundingBox other : collidesWith) {
+							stillColliding |= worldVolume.intersects(other) || other.containsBoundingBox(worldVolume);
+						}
+						if (!stillColliding) {
 							break;
 						}
-						//HolderA: Entity
-						//HolderB: Entity
-						if (holderB instanceof Entity) {
-							//Entity was removed before the contact point could be resolved, break
-							if (((Entity) holderB).isRemoved()) {
-								break;
-							}
-							//Call onCollide for colliderA's EntityComponents
-							for (Component component : ((Entity) holderA).values()) {
-								if (component instanceof EntityComponent) {
-									((EntityComponent) component).onCollided(contactPointA, contactPointB, (Entity) holderB);
-								}
-							}
-							//Call onCollide for colliderB's EntityComponents
-							for (Component component : ((Entity) holderB).values()) {
-								if (component instanceof EntityComponent) {
-									((EntityComponent) component).onCollided(contactPointB, contactPointA, (Entity) holderA);
-								}
-							}
-						//HolderA: Entity
-						//HolderB: Block
-						} else if (holderB instanceof Block) {
-							//Call onCollide for colliderA's EntityComponents
-							for (Component component : ((Entity) holderA).values()) {
-								if (component instanceof EntityComponent) {
-									((EntityComponent) component).onCollided(contactPointA, contactPointB, (Block) holderB);
-								}
-							}
-							((Block) holderB).getMaterial().onCollided(contactPointB, contactPointA, (Entity) holderA);
-						}
-					//HolderA: Block
-					//HolderB: Entity
-					} else if (holderA instanceof Block) {
-						if (holderB instanceof Entity) {
-							//Entity was removed before the contact point could be resolved, break
-							if (((Entity) holderB).isRemoved()) {
-								break;
-							}
-							((Block) holderA).getMaterial().onCollided(contactPointA, contactPointB, (Entity) holderB);
-							//Call onCollide for colliderB's EntityComponents
-							for (Component component : ((Entity) holderB).values()) {
-								if (component instanceof EntityComponent) {
-									((EntityComponent) component).onCollided(contactPointB, contactPointA, (Block) holderA);
-								}
-							}
-						}
+					}
+					boolean stillColliding = false;
+					for (BoundingBox other : collidesWith) {
+						stillColliding |= worldVolume.intersects(other) || other.containsBoundingBox(worldVolume);
+					}
+					if (stillColliding) {
+						//Unable to resolve collisions!
+					}
+					Vector3 offset = worldVolume.getMin().subtract(newPosition);
+					//Was forced to collide, kill accel/velocity
+					if (!offset.equals(Vector3.ZERO)) {
+						scene.setMovementVelocity(Vector3.ZERO).clearForces();
+						scene.setPosition(newPosition.add(offset));
+					} else {
+						/* Calculate the new velocity */
+
+						Vector3 velocity = prevVelocity.add(acceleration.multiply(dt));
+						scene.setMovementVelocity(velocity);
 					}
 				}
 			}
-		} catch (Exception e) {
-			synchronized(logLock) {
-				Spout.getLogger().log(Level.SEVERE, "Exception while executing physics in region " + getBase().toBlockString(), e);
-			}
-		} finally {
-			lock.writeLock().unlock();
 		}
 	}
 
@@ -1877,20 +1813,6 @@ public class SpoutRegion extends Region implements AsyncManager {
 		SpoutChunk c = getChunk(x, y, z, LoadOption.NO_LOAD);
 		if (c != null) {
 			c.setModified();
-		}
-	}
-
-	public void setGravity(Vector3 gravity) {
-		synchronized(simulation) {
-			simulation.setGravity(VectorMath.toVector3f(gravity));
-		}
-	}
-
-	public Vector3 getGravity() {
-		synchronized(simulation) {
-			Vector3f vector = new Vector3f();
-			vector = simulation.getGravity(vector);
-			return VectorMath.toVector3(vector);
 		}
 	}
 
