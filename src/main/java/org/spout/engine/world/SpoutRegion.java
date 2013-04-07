@@ -882,15 +882,15 @@ public class SpoutRegion extends Region implements AsyncManager {
 	 * @param dt
 	 */
 	private void updateDynamics(float dt) {
+		dt = 1F/20F;
 		for (SpoutEntity entity : entityManager.getAllLive()) {
 			if (!entity.isRemoved()) {
 				SpoutSceneComponent scene = (SpoutSceneComponent) entity.getScene();
 				if (scene.isActivated()) {
 					//TODO: This is a poor linear approximation of acceleration merely to prove it works
 					//need to switch to proper numerical approximation of derivatives, e.g Runge–Kutta methods
-					final Vector3 forces = scene.getRawForces();
+					final Vector3 forces = scene.getRawForces().add(scene.getRawImpulses());
 					final Vector3 acceleration = forces.divide(scene.getMass()).add(0, -9.81F, 0);
-					scene.setRawForces(forces.add(forces.multiply(-1F * dt)));
 					final Vector3 prevVelocity = scene.getRawMovementVelocity();
 					
 					/* Calculate the new position*/
@@ -934,7 +934,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 								}
 								if (material != BlockMaterial.AIR) {
 									//TODO give block materials proper volumes
-									BoundingBox block = new BoundingBox(newPosition, newPosition.add(Vector3.ONE));
+									BoundingBox block = new BoundingBox(new Vector3(bx + dx, by + dy, bz + dz), new Vector3(bx + dx + 1, by + dy + 1, bz + dz + 1));
 									if (worldVolume.intersects(block) || block.containsBoundingBox(worldVolume)) {
 										collidesWith.add(block);
 									}
@@ -943,15 +943,17 @@ public class SpoutRegion extends Region implements AsyncManager {
 						}
 					}
 					//TODO: collisions with other entities
-					
+					Vector3 totalOffset = Vector3.ZERO;
 					for (BoundingBox box : collidesWith) {
 						//Offset the entity with the minimum distance needed to move out of the block
-						worldVolume.offset(worldVolume.resolveStatic(box));
+						Vector3 offset = worldVolume.resolveStatic(box);
+						worldVolume.offset(offset);
+						totalOffset = totalOffset.add(offset);
 						boolean stillColliding = false;
 						for (BoundingBox other : collidesWith) {
-							if (other != box) {
-								stillColliding |= worldVolume.intersects(other) || other.containsBoundingBox(worldVolume);
-							}
+							boolean intersects = worldVolume.intersects(other);
+							boolean contains = other.containsBoundingBox(worldVolume);
+							stillColliding |= (intersects | contains);
 						}
 						if (!stillColliding) {
 							break;
@@ -964,18 +966,18 @@ public class SpoutRegion extends Region implements AsyncManager {
 					if (stillColliding) {
 						//Unable to resolve collisions!
 					}
-					Vector3 offset = worldVolume.getMin().subtract(newPosition);
 					//Was forced to collide, kill accel/velocity
-					if (!offset.equals(Vector3.ZERO)) {
+					if (!totalOffset.equals(Vector3.ZERO)) {
 						scene.setMovementVelocity(Vector3.ZERO).setRawForces(Vector3.ZERO);
-						scene.setPosition(newPosition.add(offset));
-						Spout.info("Moving entity [" + entity.getId() + "] to " + newPosition.add(offset)) ;
+						//scene.setPosition(newPosition.add(offset));
+						//Spout.info("Moving entity [" + entity.getId() + "] to " + newPosition.add(offset)) ;
 					} else {
 						/* Calculate the new velocity */
-
+						scene.setPosition(newPosition);
 						Vector3 velocity = prevVelocity.add(acceleration.multiply(dt));
 						scene.setMovementVelocity(velocity);
 					}
+					scene.setRawImpulses(Vector3.ZERO);
 				}
 			}
 		}

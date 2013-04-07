@@ -46,6 +46,7 @@ public class SpoutSceneComponent extends SceneComponent {
 	private final Transform live = new Transform();
 	private Vector3 velocitySnapshot = Vector3.ZERO;
 	private final AtomicReference<Vector3> velocity = new AtomicReference<Vector3>(Vector3.ZERO);
+	private final AtomicReference<Vector3> impulses = new AtomicReference<Vector3>(Vector3.ZERO);
 	private final AtomicReference<Vector3> forces = new AtomicReference<Vector3>(Vector3.ZERO);
 	private final AtomicFloat mass = new AtomicFloat(0);
 	private final AtomicReference<BoundingBox> area = new AtomicReference<BoundingBox>(null);
@@ -170,8 +171,10 @@ public class SpoutSceneComponent extends SceneComponent {
 
 	@Override
 	public SpoutSceneComponent impulse(Vector3 impulse) {
-		//TODO: implement correctly
-		force(impulse);
+		Vector3 impulses = this.impulses.get();
+		while(!this.impulses.compareAndSet(impulses, impulses.add(impulse))) {
+			impulses = this.impulses.get();
+		}
 		return this;
 	}
 
@@ -257,8 +260,17 @@ public class SpoutSceneComponent extends SceneComponent {
 		return this.forces.get();
 	}
 
+	public Vector3 getRawImpulses() {
+		return this.impulses.get();
+	}
+
 	public SpoutSceneComponent setRawForces(Vector3 force) {
 		this.forces.set(force);
+		return this;
+	}
+
+	public SpoutSceneComponent setRawImpulses(Vector3 impulse) {
+		this.impulses.set(impulse);
 		return this;
 	}
 
