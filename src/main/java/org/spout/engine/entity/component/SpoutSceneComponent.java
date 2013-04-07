@@ -257,8 +257,8 @@ public class SpoutSceneComponent extends SceneComponent {
 		return this.forces.get();
 	}
 
-	public SpoutSceneComponent clearForces() {
-		this.forces.set(Vector3.ZERO);
+	public SpoutSceneComponent setRawForces(Vector3 force) {
+		this.forces.set(force);
 		return this;
 	}
 
@@ -324,6 +324,7 @@ public class SpoutSceneComponent extends SceneComponent {
 	 */
 	public void copySnapshot() {
 		snapshot.set(live);
+		velocitySnapshot = velocity.get();
 
 		position = snapshot.getPosition();
 		scale = snapshot.getScale();

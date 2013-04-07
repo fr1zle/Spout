@@ -888,7 +888,9 @@ public class SpoutRegion extends Region implements AsyncManager {
 				if (scene.isActivated()) {
 					//TODO: This is a poor linear approximation of acceleration merely to prove it works
 					//need to switch to proper numerical approximation of derivatives, e.g Runge–Kutta methods
-					final Vector3 acceleration = scene.getRawForces().divide(scene.getMass()).add(-9.81F, -9.81F, -9.81F);
+					final Vector3 forces = scene.getRawForces();
+					final Vector3 acceleration = forces.divide(scene.getMass()).add(0, -9.81F, 0);
+					scene.setRawForces(forces.add(forces.multiply(-1F * dt)));
 					final Vector3 prevVelocity = scene.getRawMovementVelocity();
 					
 					/* Calculate the new position*/
@@ -947,7 +949,9 @@ public class SpoutRegion extends Region implements AsyncManager {
 						worldVolume.offset(worldVolume.resolveStatic(box));
 						boolean stillColliding = false;
 						for (BoundingBox other : collidesWith) {
-							stillColliding |= worldVolume.intersects(other) || other.containsBoundingBox(worldVolume);
+							if (other != box) {
+								stillColliding |= worldVolume.intersects(other) || other.containsBoundingBox(worldVolume);
+							}
 						}
 						if (!stillColliding) {
 							break;
@@ -963,8 +967,9 @@ public class SpoutRegion extends Region implements AsyncManager {
 					Vector3 offset = worldVolume.getMin().subtract(newPosition);
 					//Was forced to collide, kill accel/velocity
 					if (!offset.equals(Vector3.ZERO)) {
-						scene.setMovementVelocity(Vector3.ZERO).clearForces();
+						scene.setMovementVelocity(Vector3.ZERO).setRawForces(Vector3.ZERO);
 						scene.setPosition(newPosition.add(offset));
+						Spout.info("Moving entity [" + entity.getId() + "] to " + newPosition.add(offset)) ;
 					} else {
 						/* Calculate the new velocity */
 
