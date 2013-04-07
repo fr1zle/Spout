@@ -79,6 +79,7 @@ import org.spout.api.material.BlockMaterial;
 import org.spout.api.material.DynamicUpdateEntry;
 import org.spout.api.material.MaterialRegistry;
 import org.spout.api.material.block.BlockFace;
+import org.spout.api.material.block.BlockFaces;
 import org.spout.api.material.range.EffectRange;
 import org.spout.api.math.GenericMath;
 import org.spout.api.math.Vector3;
@@ -905,8 +906,10 @@ public class SpoutRegion extends Region implements AsyncManager {
 					// a - acceleration
 					
 					final Vector3 movement = prevVelocity.multiply(dt).add(acceleration.multiply(dt * dt).divide(2));
+					final Point position = scene.getTransformLive().getPosition();
 					Point newPosition = scene.getTransformLive().getPosition().add(movement);
 					final BoundingBox volume = scene.getVolume();
+					final BoundingBox oldVolume = volume.clone().offset(position);
 					final BoundingBox worldVolume = volume.clone().offset(newPosition);
 					final int bx = newPosition.getBlockX();
 					final int by = newPosition.getBlockY();
@@ -914,10 +917,10 @@ public class SpoutRegion extends Region implements AsyncManager {
 					final int rangeX = (int) Math.ceil(volume.getMax().getX() - volume.getMin().getX());
 					final int rangeY = (int) Math.ceil(volume.getMax().getY() - volume.getMin().getY());
 					final int rangeZ = (int) Math.ceil(volume.getMax().getZ() - volume.getMin().getZ());
-					LinkedList<BoundingBox> collidesWith = new LinkedList<BoundingBox>();
-					for (int dx = 0; dx < rangeX; dx++) {
-						for (int dy = 0; dy < rangeY; dy++) {
-							for (int dz = 0; dz < rangeZ; dz++) {
+					final LinkedList<BoundingBox> nearbyAABB = new LinkedList<BoundingBox>();
+					for (int dx = -rangeX; dx <= rangeX; dx++) {
+						for (int dy = -rangeY; dy <= rangeY; dy++) {
+							for (int dz = -rangeZ; dz <= rangeZ; dz++) {
 								BlockMaterial material;
 								AreaChunkAccess source;
 								if (this.containsBlock(bx + dx, by + dy, bz + dz)) {
@@ -935,32 +938,66 @@ public class SpoutRegion extends Region implements AsyncManager {
 								if (material != BlockMaterial.AIR) {
 									//TODO give block materials proper volumes
 									BoundingBox block = new BoundingBox(new Vector3(bx + dx, by + dy, bz + dz), new Vector3(bx + dx + 1, by + dy + 1, bz + dz + 1));
-									if (worldVolume.intersects(block) || block.containsBoundingBox(worldVolume)) {
-										collidesWith.add(block);
-									}
+									//if (worldVolume.intersects(block) || block.containsBoundingBox(worldVolume)) {
+										nearbyAABB.add(block);
+									//}
 								}
 							}
 						}
 					}
 					//TODO: collisions with other entities
+					
+					//Check we are currently encased in a block
+					//for (BoundingBox box : nearbyAABB) {
+					//	if (box.containsBoundingBox(oldVolume)) {
+					//		for (BlockFace face : BlockFaces.NESWBT) {
+					//			face.
+					//		}
+					//	}
+					//}
+					
+					//Offset in Y direction first
 					Vector3 totalOffset = Vector3.ZERO;
-					for (BoundingBox box : collidesWith) {
-						//Offset the entity with the minimum distance needed to move out of the block
-						Vector3 offset = worldVolume.resolveStatic(box);
-						worldVolume.offset(offset);
-						totalOffset = totalOffset.add(offset);
-						boolean stillColliding = false;
-						for (BoundingBox other : collidesWith) {
-							boolean intersects = worldVolume.intersects(other);
-							boolean contains = other.containsBoundingBox(worldVolume);
-							stillColliding |= (intersects | contains);
-						}
-						if (!stillColliding) {
-							break;
+					for (BoundingBox box : nearbyAABB) {
+						if (worldVolume.intersects(box) || box.containsBoundingBox(worldVolume)) {
+							//Offset the entity with the minimum distance needed to move out of the block
+							Vector3 offset = worldVolume.resolveStatic(box);
+							if (!offset.equals(Vector3.ZERO)) {
+								worldVolume.offset(0, offset.getY(), 0);
+								totalOffset = totalOffset.add(0, offset.getY(), 0);
+								break;
+							}
 						}
 					}
+					
+					//Offset in X direction
+					for (BoundingBox box : nearbyAABB) {
+						if (worldVolume.intersects(box) || box.containsBoundingBox(worldVolume)) {
+							//Offset the entity with the minimum distance needed to move out of the block
+							Vector3 offset = worldVolume.resolveStatic(box);
+							if (!offset.equals(Vector3.ZERO)) {
+								worldVolume.offset(offset.getX(), 0, 0);
+								totalOffset = totalOffset.add(offset.getX(), 0, 0);
+								break;
+							}
+						}
+					}
+					
+					//Offset in Z direction
+					for (BoundingBox box : nearbyAABB) {
+						if (worldVolume.intersects(box) || box.containsBoundingBox(worldVolume)) {
+							//Offset the entity with the minimum distance needed to move out of the block
+							Vector3 offset = worldVolume.resolveStatic(box);
+							if (!offset.equals(Vector3.ZERO)) {
+								worldVolume.offset(0, 0, offset.getZ());
+								totalOffset = totalOffset.add(0, 0, offset.getZ());
+								break;
+							}
+						}
+					}
+					
 					boolean stillColliding = false;
-					for (BoundingBox other : collidesWith) {
+					for (BoundingBox other : nearbyAABB) {
 						stillColliding |= worldVolume.intersects(other) || other.containsBoundingBox(worldVolume);
 					}
 					if (stillColliding) {
@@ -969,8 +1006,8 @@ public class SpoutRegion extends Region implements AsyncManager {
 					//Was forced to collide, kill accel/velocity
 					if (!totalOffset.equals(Vector3.ZERO)) {
 						scene.setMovementVelocity(Vector3.ZERO).setRawForces(Vector3.ZERO);
-						//scene.setPosition(newPosition.add(offset));
-						//Spout.info("Moving entity [" + entity.getId() + "] to " + newPosition.add(offset)) ;
+						scene.setPosition(newPosition.add(totalOffset));
+						Spout.info("Moving entity [" + entity.getId() + "] to " + newPosition.add(totalOffset)) ;
 					} else {
 						/* Calculate the new velocity */
 						scene.setPosition(newPosition);
