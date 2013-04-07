@@ -915,7 +915,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 					LinkedList<BoundingBox> collidesWith = new LinkedList<BoundingBox>();
 					for (int dx = 0; dx < rangeX; dx++) {
 						for (int dy = 0; dy < rangeY; dy++) {
-							for (int dz = 0; dx < rangeZ; dz++) {
+							for (int dz = 0; dz < rangeZ; dz++) {
 								BlockMaterial material;
 								AreaChunkAccess source;
 								if (this.containsBlock(bx + dx, by + dy, bz + dz)) {
