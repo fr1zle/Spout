@@ -938,7 +938,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 								}
 								if (material != BlockMaterial.AIR) {
 									//TODO give block materials proper volumes - unsafe cast if a material were to have a volume that wasn't a bounding box
-									BoundingBox block = (BoundingBox) material.getBoundingArea().offset(new Vector3(bx + dx, by + dy, bz + dz));
+									BoundingBox block = (BoundingBox) material.getVolume().offset(new Vector3(bx + dx, by + dy, bz + dz));
 									//if (worldVolume.intersects(block) || block.containsBoundingBox(worldVolume)) {
 										nearbyAABB.add(block);
 									//}
