@@ -910,13 +910,14 @@ public class SpoutRegion extends Region implements AsyncManager {
 					Point newPosition = scene.getTransformLive().getPosition().add(movement);
 					final BoundingBox volume = scene.getVolume();
 					final BoundingBox oldVolume = volume.clone().offset(position);
-					final BoundingBox worldVolume = volume.clone().offset(newPosition);
+					BoundingBox worldVolume = volume.clone().offset(newPosition);
 					final int bx = newPosition.getBlockX();
 					final int by = newPosition.getBlockY();
 					final int bz = newPosition.getBlockZ();
 					final int rangeX = (int) Math.ceil(volume.getMax().getX() - volume.getMin().getX());
 					final int rangeY = (int) Math.ceil(volume.getMax().getY() - volume.getMin().getY());
 					final int rangeZ = (int) Math.ceil(volume.getMax().getZ() - volume.getMin().getZ());
+					//TODO Use CollisionVolume instead of BoundingBox
 					final LinkedList<BoundingBox> nearbyAABB = new LinkedList<BoundingBox>();
 					for (int dx = -rangeX; dx <= rangeX; dx++) {
 						for (int dy = -rangeY; dy <= rangeY; dy++) {
@@ -936,8 +937,8 @@ public class SpoutRegion extends Region implements AsyncManager {
 									material = BlockMaterial.AIR;
 								}
 								if (material != BlockMaterial.AIR) {
-									//TODO give block materials proper volumes
-									BoundingBox block = new BoundingBox(new Vector3(bx + dx, by + dy, bz + dz), new Vector3(bx + dx + 1, by + dy + 1, bz + dz + 1));
+									//TODO give block materials proper volumes - unsafe cast if a material were to have a volume that wasn't a bounding box
+									BoundingBox block = (BoundingBox) material.getBoundingArea().offset(new Vector3(bx + dx, by + dy, bz + dz));
 									//if (worldVolume.intersects(block) || block.containsBoundingBox(worldVolume)) {
 										nearbyAABB.add(block);
 									//}
@@ -963,7 +964,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 							//Offset the entity with the minimum distance needed to move out of the block
 							Vector3 offset = worldVolume.resolveStatic(box);
 							if (!offset.equals(Vector3.ZERO)) {
-								worldVolume.offset(0, offset.getY(), 0);
+								worldVolume = worldVolume.offset(0, offset.getY(), 0);
 								totalOffset = totalOffset.add(0, offset.getY(), 0);
 								break;
 							}
@@ -976,7 +977,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 							//Offset the entity with the minimum distance needed to move out of the block
 							Vector3 offset = worldVolume.resolveStatic(box);
 							if (!offset.equals(Vector3.ZERO)) {
-								worldVolume.offset(offset.getX(), 0, 0);
+								worldVolume = worldVolume.offset(offset.getX(), 0, 0);
 								totalOffset = totalOffset.add(offset.getX(), 0, 0);
 								break;
 							}
@@ -989,7 +990,7 @@ public class SpoutRegion extends Region implements AsyncManager {
 							//Offset the entity with the minimum distance needed to move out of the block
 							Vector3 offset = worldVolume.resolveStatic(box);
 							if (!offset.equals(Vector3.ZERO)) {
-								worldVolume.offset(0, 0, offset.getZ());
+								worldVolume = worldVolume.offset(0, 0, offset.getZ());
 								totalOffset = totalOffset.add(0, 0, offset.getZ());
 								break;
 							}
