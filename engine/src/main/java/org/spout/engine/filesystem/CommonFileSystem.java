@@ -57,19 +57,22 @@ import org.spout.api.resource.LoaderNotFoundException;
 import org.spout.api.resource.ResourceLoader;
 import org.spout.api.resource.ResourceNotFoundException;
 import org.spout.api.resource.ResourcePathResolver;
+import org.spout.engine.filesystem.path.ClasspathPathResolver;
 import org.spout.engine.filesystem.path.FilePathResolver;
 import org.spout.engine.filesystem.path.JarFilePathResolver;
 import org.spout.engine.filesystem.path.ZipFilePathResolver;
 import org.spout.engine.filesystem.resource.loader.CommandBatchLoader;
 
 public abstract class CommonFileSystem implements FileSystem {
-	public static final File PLUGINS_DIRECTORY = new File("plugins");
-	public static final File RESOURCES_DIRECTORY = new File("resources");
-	public static final File CACHE_DIRECTORY = new File("cache");
-	public static final File CONFIG_DIRECTORY = new File("config");
-	public static final File UPDATES_DIRECTORY = new File("updates");
-	public static final File DATA_DIRECTORY = new File("data");
-	public static final File WORLDS_DIRECTORY = new File("worlds");
+	public static final String MAIN_DIR_PROPERTY = System.getProperty("spout.maindir");
+	public static final File MAIN_DIRECTORY = MAIN_DIR_PROPERTY != null ? new File(MAIN_DIR_PROPERTY) : new File("");
+	public static final File PLUGINS_DIRECTORY = new File(MAIN_DIRECTORY, "plugins");
+	public static final File RESOURCES_DIRECTORY = new File(MAIN_DIRECTORY, "resources");
+	public static final File CACHE_DIRECTORY = new File(MAIN_DIRECTORY, "cache");
+	public static final File CONFIG_DIRECTORY = new File(MAIN_DIRECTORY, "config");
+	public static final File UPDATES_DIRECTORY = new File(MAIN_DIRECTORY, "updates");
+	public static final File DATA_DIRECTORY = new File(MAIN_DIRECTORY, "data");
+	public static final File WORLDS_DIRECTORY = new File(MAIN_DIRECTORY, "worlds");
 	protected final Set<ResourceLoader> loaders = new HashSet<>();
 	protected final Map<URI, Object> loadedResources = new HashMap<>();
 	protected final List<ResourcePathResolver> pathResolvers = new ArrayList<>();
@@ -105,6 +108,9 @@ public abstract class CommonFileSystem implements FileSystem {
 		registerLoader(new CommandBatchLoader());
 
 		createDirs();
+		if(Boolean.getBoolean("useClasspathPlugins")) {
+			pathResolvers.add(new ClasspathPathResolver());
+		}
 		pathResolvers.add(new FilePathResolver(CACHE_DIRECTORY.getPath()));
 		pathResolvers.add(new ZipFilePathResolver(RESOURCES_DIRECTORY.getPath()));
 		pathResolvers.add(new JarFilePathResolver());

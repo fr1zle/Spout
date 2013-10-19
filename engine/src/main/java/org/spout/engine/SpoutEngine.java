@@ -49,14 +49,14 @@ import org.spout.api.event.server.permissions.PermissionGetAllWithNodeEvent;
 import org.spout.api.exception.SpoutRuntimeException;
 import org.spout.api.generator.biome.BiomeRegistry;
 import org.spout.api.geo.World;
-import org.spout.api.geo.cuboid.Region;
-import org.spout.api.geo.discrete.Point;
 import org.spout.api.inventory.recipe.RecipeManager;
 import org.spout.api.inventory.recipe.SimpleRecipeManager;
 import org.spout.api.lighting.LightingRegistry;
 import org.spout.api.material.MaterialRegistry;
 import org.spout.api.permissions.DefaultPermissions;
 import org.spout.api.permissions.PermissionsSubject;
+import org.spout.api.plugin.ClasspathPluginManager;
+import org.spout.api.plugin.JarFilePluginManager;
 import org.spout.api.plugin.Plugin;
 import org.spout.api.plugin.PluginManager;
 import org.spout.api.plugin.security.PluginSecurityManager;
@@ -75,7 +75,6 @@ import org.spout.engine.command.MessagingCommands;
 import org.spout.engine.command.ServerCommands;
 import org.spout.engine.command.TestCommands;
 import org.spout.engine.console.ConsoleManager;
-import org.spout.engine.entity.EntityManager;
 import org.spout.engine.entity.SpoutPlayer;
 import org.spout.engine.filesystem.CommonFileSystem;
 import org.spout.engine.filesystem.ServerFileSystem;
@@ -90,7 +89,6 @@ import org.spout.engine.util.thread.snapshotable.SnapshotManager;
 import org.spout.engine.util.thread.snapshotable.SnapshotableLinkedHashMap;
 import org.spout.engine.util.thread.snapshotable.SnapshotableReference;
 import org.spout.engine.world.MemoryReclamationThread;
-import org.spout.engine.world.SpoutRegion;
 
 public abstract class SpoutEngine implements AsyncManager, Engine {
 	private static final Logger logger = Logger.getLogger("Spout");
@@ -106,7 +104,7 @@ public abstract class SpoutEngine implements AsyncManager, Engine {
 		}
 	}
 	private final PluginSecurityManager securityManager = new PluginSecurityManager(0); //TODO Need to integrate this/evaluate security in the engine.
-	private final PluginManager pluginManager = new PluginManager(this, securityManager, 0.0);
+	private final PluginManager pluginManager;
 	private final ConsoleManager consoleManager;
 	private final EventManager eventManager = new SimpleEventManager();
 	private final RecipeManager recipeManager = new SimpleRecipeManager();
@@ -130,6 +128,14 @@ public abstract class SpoutEngine implements AsyncManager, Engine {
 	public SpoutEngine() {
 		logFile = "log-%D.txt";
 		consoleManager = new ConsoleManager(this);
+		boolean useClasspathPlugins = Boolean.getBoolean("useClasspathPlugins");
+		if (useClasspathPlugins) {
+			pluginManager = new ClasspathPluginManager(this);
+		} else {
+			pluginManager = new JarFilePluginManager(this, securityManager, 0.0);
+
+		}
+
 	}
 
 	public void init(SpoutApplication args) {
@@ -163,7 +169,7 @@ public abstract class SpoutEngine implements AsyncManager, Engine {
 
 	public void start() {
 		Spout.info("Spout is starting in {0}-only mode.", getPlatform().name().toLowerCase());
-		Spout.info("This {0}'s version is {1}.", getPlatform().name().toLowerCase(), Spout.getAPIVersion().replace("dev b", ""));
+		Spout.info("This {0}'s version is {1}.", getPlatform().name().toLowerCase(), (Spout.getAPIVersion() != null ? Spout.getAPIVersion().replace("dev b", "") : ""));
 		Spout.info("This software is currently in alpha status so components may");
 		Spout.info("have bugs or not work at all. Please report any issues to");
 		Spout.info("http://issues.spout.org");
@@ -343,8 +349,9 @@ public abstract class SpoutEngine implements AsyncManager, Engine {
 			for (Map.Entry<SocketAddress, Protocol> entry : boundProtocols.entrySet()) {
 				if (entry.getKey() instanceof InetSocketAddress && socketAddress instanceof InetSocketAddress) {
 					InetSocketAddress key = (InetSocketAddress) entry.getKey(), given = (InetSocketAddress) socketAddress;
-					if (key.getPort() == given.getPort() && ((given.getAddress() instanceof Inet4Address && key.getAddress().getHostAddress().equals("0.0.0.0"))
-							|| (given.getAddress() instanceof Inet6Address && key.getAddress().getHostAddress().equals("::")))) { // TODO: Make sure IPV6 works
+					if (key.getPort() == given.getPort()
+							&& ((given.getAddress() instanceof Inet4Address && key.getAddress().getHostAddress().equals("0.0.0.0")) || (given.getAddress() instanceof Inet6Address && key.getAddress()
+									.getHostAddress().equals("::")))) { // TODO: Make sure IPV6 works
 						proto = entry.getValue();
 						break;
 					}
